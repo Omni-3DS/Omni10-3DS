@@ -6,41 +6,103 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
+  release:
+    types: [ published ]
+
+env:
+  DEVKITPRO: /opt/devkitpro
+  DEVKITARM: /opt/devkitpro/devkitARM
 
 jobs:
   build:
+    name: Build Omni10.firm
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
-      - name: Install dependencies (placeholder)
+      - name: Cache devkitPro
+        id: cache-devkit
+        uses: actions/cache@v4
+        with:
+          path: /opt/devkitpro
+          key: ${{ runner.os }}-devkitpro-3ds-v1
+
+      - name: Install system dependencies
         run: |
-          echo "Installing build dependencies..."
-          # In the future this will install / cache:
-          # - devkitARM
-          # - firmtool
-          # - other 3DS toolchain components
           sudo apt-get update
-          sudo apt-get install -y build-essential python3-pip
-          pip3 install firmtool || true
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            cmake \
+            git \
+            python3-pip \
+            wget \
+            unzip \
+            libpng-dev
+
+      - name: Install Python tools
+        run: |
+          pip3 install --upgrade pip
+          pip3 install firmtool pycryptodome || true
+
+      - name: Setup devkitPro (if not cached)
+        if: steps.cache-devkit.outputs.cache-hit != 'true'
+        run: |
+          echo "devkitPro cache miss – would install full 3DS toolchain here"
+          # Real install would look like:
+          # wget https://github.com/devkitPro/installer/... 
+          # Or use the official pacman packages
+          mkdir -p /opt/devkitpro
+          echo "Placeholder for devkitARM + libctru + firmtool"
+
+      - name: Build info
+        run: |
+          echo "========================================"
+          echo "  Omni10-3DS Build"
+          echo "========================================"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          make info || true
 
       - name: Build
         run: |
-          echo "Running make firm..."
+          make clean || true
           make firm
+          echo "Build finished"
 
-      - name: Upload artifacts
+      - name: Prepare release package
+        run: |
+          mkdir -p release/Omni10
+          cp -r build/* release/Omni10/ 2>/dev/null || true
+          cp -r scripts release/Omni10/ 2>/dev/null || true
+          cp -r assets release/Omni10/ 2>/dev/null || true
+          cp README.md LICENSE release/Omni10/ 2>/dev/null || true
+          cd release && zip -r Omni10-3DS.zip Omni10 || true
+
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Omni10-artifacts
+          name: Omni10-3DS-${{ github.sha }}
           path: |
             build/
+            release/
             *.firm
           if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload release asset
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/Omni10-3DS.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
