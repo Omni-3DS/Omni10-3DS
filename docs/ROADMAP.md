@@ -1,12 +1,15 @@
 # Omni10-3DS Roadmap
 
-## Phase 0 – Project Setup (current)
+## Phase 0 – Project Setup (mostly done)
 - [x] Repository created
 - [x] README + License
 - [x] GitHub Actions CI skeleton
 - [x] Basic Makefile
-- [ ] Project structure & source tree
-- [ ] Splash screen assets
+- [x] Project structure & source tree
+- [x] Splash assets folder
+- [x] Lua API documentation
+- [x] `.o10` scripting documentation
+- [x] Example scripts (`.o10` + `.lua`)
 
 ## Phase 1 – Core Foundation
 - [ ] Basic FIRM payload that boots
@@ -28,5 +31,5 @@
 
 ## Phase 4 – Polish & Release
 - [ ] Custom splash + animations
-- [ ] Documentation
+- [ ] Full documentation
 - [ ] First public release
