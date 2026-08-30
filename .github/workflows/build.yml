@@ -27,8 +27,9 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           cache: 'pip'
+          cache-dependency-path: requirements.txt
 
       - name: Cache devkitPro
         id: cache-devkit
@@ -47,22 +48,20 @@ jobs:
             python3-pip \
             wget \
             unzip \
+            zip \
             libpng-dev
 
       - name: Install Python tools
         run: |
-          pip3 install --upgrade pip
-          pip3 install firmtool pycryptodome || true
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt || pip install firmtool pycryptodome || true
 
       - name: Setup devkitPro (if not cached)
         if: steps.cache-devkit.outputs.cache-hit != 'true'
         run: |
-          echo "devkitPro cache miss – would install full 3DS toolchain here"
-          # Real install would look like:
-          # wget https://github.com/devkitPro/installer/... 
-          # Or use the official pacman packages
+          echo "devkitPro cache miss – placeholder for full 3DS toolchain"
           mkdir -p /opt/devkitpro
-          echo "Placeholder for devkitARM + libctru + firmtool"
+          echo "Placeholder for devkitARM + libctru"
 
       - name: Build info
         run: |
@@ -85,7 +84,9 @@ jobs:
           cp -r build/* release/Omni10/ 2>/dev/null || true
           cp -r scripts release/Omni10/ 2>/dev/null || true
           cp -r assets release/Omni10/ 2>/dev/null || true
-          cp README.md LICENSE release/Omni10/ 2>/dev/null || true
+          cp -r data release/Omni10/ 2>/dev/null || true
+          cp -r languages release/Omni10/ 2>/dev/null || true
+          cp README.md LICENSE requirements.txt release/Omni10/ 2>/dev/null || true
           cd release && zip -r Omni10-3DS.zip Omni10 || true
 
       - name: Upload build artifacts
@@ -95,7 +96,6 @@ jobs:
           path: |
             build/
             release/
-            *.firm
           if-no-files-found: ignore
           retention-days: 14
 
