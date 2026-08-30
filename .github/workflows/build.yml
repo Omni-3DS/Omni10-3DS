@@ -2,16 +2,16 @@ name: Build Omni10-3DS
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
   release:
-    types: [ published ]
+    types: [published]
 
 jobs:
   build:
-    name: Check + source package
+    name: Check and source package
     runs-on: ubuntu-latest
 
     steps:
@@ -21,8 +21,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          python-version: "3.12"
+          cache: pip
           cache-dependency-path: requirements.txt
 
       - name: Install system dependencies
@@ -35,7 +35,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt || true
 
-      - name: Toolchain check (expected: no full devkit on CI yet)
+      - name: Toolchain check
         run: |
           make check
           make info
@@ -43,7 +43,6 @@ jobs:
 
       - name: Verify make firm refuses fake output
         run: |
-          # Must fail without real toolchain – no corrupt .firm
           if make firm; then
             echo "ERROR: make firm should fail without toolchain"
             exit 1
