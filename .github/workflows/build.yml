@@ -9,20 +9,14 @@ on:
   release:
     types: [ published ]
 
-env:
-  DEVKITPRO: /opt/devkitpro
-  DEVKITARM: /opt/devkitpro/devkitARM
-
 jobs:
   build:
-    name: Build Omni10.firm
+    name: Check + source package
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -31,71 +25,42 @@ jobs:
           cache: 'pip'
           cache-dependency-path: requirements.txt
 
-      - name: Cache devkitPro
-        id: cache-devkit
-        uses: actions/cache@v4
-        with:
-          path: /opt/devkitpro
-          key: ${{ runner.os }}-devkitpro-3ds-v1
-
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential \
-            cmake \
-            git \
-            python3-pip \
-            wget \
-            unzip \
-            zip \
-            libpng-dev
+          sudo apt-get install -y --no-install-recommends build-essential zip
 
       - name: Install Python tools
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt || pip install firmtool pycryptodome || true
+          pip install -r requirements.txt || true
 
-      - name: Setup devkitPro (if not cached)
-        if: steps.cache-devkit.outputs.cache-hit != 'true'
+      - name: Toolchain check (expected: no full devkit on CI yet)
         run: |
-          echo "devkitPro cache miss – placeholder for full 3DS toolchain"
-          mkdir -p /opt/devkitpro
-          echo "Placeholder for devkitARM + libctru"
+          make check
+          make info
+          make help
 
-      - name: Build info
+      - name: Verify make firm refuses fake output
         run: |
-          echo "========================================"
-          echo "  Omni10-3DS Build"
-          echo "========================================"
-          echo "Branch: ${{ github.ref_name }}"
-          echo "Commit: ${{ github.sha }}"
-          make info || true
+          # Must fail without real toolchain – no corrupt .firm
+          if make firm; then
+            echo "ERROR: make firm should fail without toolchain"
+            exit 1
+          fi
+          echo "OK: make firm correctly refused fake FIRM"
 
-      - name: Build
+      - name: Source release package
         run: |
-          make clean || true
-          make firm
-          echo "Build finished"
+          make release
+          test ! -f release/Omni10-3DS/Omni10.firm
+          cd release && zip -r Omni10-3DS-source.zip Omni10-3DS
 
-      - name: Prepare release package
-        run: |
-          mkdir -p release/Omni10
-          cp -r build/* release/Omni10/ 2>/dev/null || true
-          cp -r scripts release/Omni10/ 2>/dev/null || true
-          cp -r assets release/Omni10/ 2>/dev/null || true
-          cp -r data release/Omni10/ 2>/dev/null || true
-          cp -r languages release/Omni10/ 2>/dev/null || true
-          cp README.md LICENSE requirements.txt release/Omni10/ 2>/dev/null || true
-          cd release && zip -r Omni10-3DS.zip Omni10 || true
-
-      - name: Upload build artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Omni10-3DS-${{ github.sha }}
-          path: |
-            build/
-            release/
+          name: Omni10-3DS-source-${{ github.sha }}
+          path: release/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -103,6 +68,6 @@ jobs:
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: release/Omni10-3DS.zip
+          files: release/Omni10-3DS-source.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
