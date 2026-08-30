@@ -20,19 +20,29 @@ It aims to be significantly more powerful and modern than GodMode9 while keeping
 
 ```
 Omni10-3DS/
-├── .github/workflows/     # GitHub Actions CI
-├── assets/
-│   └── splash/            # Splash screen images & logo
+├── .github/workflows/        # GitHub Actions CI
+├── assets/splash/            # Splash screen assets
+├── data/                     # Bundled assets (embedded at build)
 ├── docs/
-│   ├── lua-api.md         # Full Lua API documentation
-│   ├── o10-scripting.md   # .o10 language documentation
-│   └── ROADMAP.md         # Development roadmap
-├── include/               # Header files
-├── scripts/
-│   └── examples/          # Example .o10 and .lua scripts
-├── source/                # Actual source code (coming soon)
+│   ├── lua-api.md            # Lua API documentation
+│   ├── o10-scripting.md      # .o10 language documentation
+│   └── ROADMAP.md
+├── include/
+│   ├── common.h
+│   ├── ui.h
+│   ├── fs.h
+│   ├── net.h                 # FTP support
+│   └── o10.h
+├── source/
+│   ├── main.c
+│   ├── ui.c
+│   ├── fs.c
+│   ├── net.c
+│   └── o10.c
+├── scripts/examples/         # Example .o10 + .lua scripts
 ├── Makefile
-├── LICENSE                # GPL-3.0
+├── CONTRIBUTING.md
+├── LICENSE                   # GPL-3.0
 └── README.md
 ```
 
@@ -40,36 +50,36 @@ Omni10-3DS/
 
 ### Native `.o10` Scripts
 High-level, easy to read automation language.  
-→ See [docs/o10-scripting.md](docs/o10-scripting.md)
+→ [docs/o10-scripting.md](docs/o10-scripting.md)
 
 ### Lua 5.4
-Full power with a clean and extended API (`ui`, `fs`, `sys`, `net`, `nand`, `title`…).  
-→ See [docs/lua-api.md](docs/lua-api.md)
+Full power with clean modules: `ui`, `fs`, `sys`, `net`, `nand`, `title`…  
+→ [docs/lua-api.md](docs/lua-api.md)
 
-Example scripts are available in `scripts/examples/`.
+Example scripts are in `scripts/examples/`.
 
 ## Building
-
-**Requirements:**
-- [devkitARM](https://devkitpro.org/)
-- firmtool
-- Python 3
 
 ```bash
 make firm
 ```
 
-GitHub Actions automatically builds on every push to `main` / `develop`.
+**Requirements:** devkitARM + firmtool + Python 3
 
-## Status
+GitHub Actions builds automatically on every push.
 
-**Early development / project skeleton**
+## Current Status
 
-- Repository & CI ✓
-- Documentation ✓
-- Example scripts ✓
-- Splash assets folder ✓
-- Real source code → in progress
+| Component              | Status          |
+|------------------------|-----------------|
+| Project structure      | Done            |
+| Headers & stubs        | Done            |
+| UI / FS / Net / o10    | Stubs ready     |
+| Documentation          | Done            |
+| Example scripts        | Done            |
+| Splash folder          | Ready           |
+| Real FIRM code         | Next step       |
+| FTP implementation     | Planned         |
 
 ## License
 
