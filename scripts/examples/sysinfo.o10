@@ -1,0 +1,13 @@
+# Omni10 – System Information Example
+
+echo "=== Omni10 System Info ==="
+echo ""
+echo "Version: $[OMNI_VERSION]"
+echo ""
+
+# Note: Real sysinfo commands will be available once implemented
+echo "This script will show detailed console information"
+echo "once the sys module is fully implemented."
+echo ""
+
+ask "Press A to continue"
