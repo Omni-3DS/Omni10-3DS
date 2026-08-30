@@ -1,0 +1,11 @@
+Omni10-3DS Official Splash
+==========================
+
+Resolution : 400 x 240 (Top Screen)
+Style      : Classic GodMode9 pixel font
+Background : Pure black (#000000)
+Text       : Omni10-3DS (white, bold pixel)
+Subtitle   : Full Access. No Limits. (gray)
+
+Place the final splash.png here.
+Optional: splash_bottom.png (320x240)
