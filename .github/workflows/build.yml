@@ -1,0 +1,46 @@
+name: Build Omni10-3DS
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies (placeholder)
+        run: |
+          echo "Installing build dependencies..."
+          # In the future this will install / cache:
+          # - devkitARM
+          # - firmtool
+          # - other 3DS toolchain components
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3-pip
+          pip3 install firmtool || true
+
+      - name: Build
+        run: |
+          echo "Running make firm..."
+          make firm
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Omni10-artifacts
+          path: |
+            build/
+            *.firm
+          if-no-files-found: ignore
