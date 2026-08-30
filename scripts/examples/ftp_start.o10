@@ -1,0 +1,20 @@
+# Omni10 – Start FTP Server Example
+
+echo "=== Omni10 FTP Server ==="
+echo ""
+
+if ask "Start FTP server on port 5000?"
+    ftp start 5000
+    echo ""
+    echo "FTP Server is running!"
+    echo "Port: 5000"
+    echo "User: omni"
+    echo "Pass: omni10"
+    echo ""
+    echo "Connect with any FTP client."
+    ask "Press A when you are finished"
+    ftp stop
+    echo "FTP server stopped."
+else
+    echo "FTP not started."
+end
