@@ -1,4 +1,8 @@
-/* Omni10-3DS ARM11 linker script (skeleton) */
+/*
+ * Omni10-3DS ARM11 linker script
+ * See docs/MEMORY_MAP.md
+ * AXI WRAM: 0x1FF80000, 512KB
+ */
 
 OUTPUT_FORMAT("elf32-littlearm", "elf32-littlearm", "elf32-littlearm")
 OUTPUT_ARCH(arm)
@@ -6,18 +10,25 @@ ENTRY(_start_arm11)
 
 MEMORY
 {
-    /* Placeholder – real ARM11 memory map later */
-    RAM (rwx) : ORIGIN = 0x1FF80000, LENGTH = 512K
+    AXIWRAM (rwx) : ORIGIN = 0x1FF80000, LENGTH = 512K
 }
 
 SECTIONS
 {
     .text : {
-        *(.text.start)
+        KEEP(*(.text.start))
         *(.text*)
-    } > RAM
+        *(.rodata*)
+    } > AXIWRAM
 
-    .rodata : { *(.rodata*) } > RAM
-    .data : { *(.data*) } > RAM
-    .bss : { *(.bss*) *(COMMON) } > RAM
+    .data : {
+        *(.data*)
+    } > AXIWRAM
+
+    .bss : {
+        *(.bss*)
+        *(COMMON)
+    } > AXIWRAM
+
+    __stack_top = ORIGIN(AXIWRAM) + LENGTH(AXIWRAM);
 }
