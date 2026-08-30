@@ -3,16 +3,16 @@
 ## Phase 0 – Project Setup ✓
 - [x] Repository created
 - [x] README + License + CONTRIBUTING
-- [x] GitHub Actions CI
+- [x] GitHub Actions CI (complete workflow)
 - [x] Makefile
 - [x] Full project structure
-- [x] Splash assets folder
-- [x] Lua API documentation
-- [x] `.o10` scripting documentation
+- [x] Splash design locked (GodMode9 pixel style)
+- [x] Lua API + .o10 documentation
 - [x] Architecture documentation
-- [x] Example scripts (`.o10` + `.lua`)
-- [x] Core module stubs (ui, fs, net, o10, sys, splash)
-- [x] Headers for all main modules
+- [x] Example scripts
+- [x] Core module stubs
+- [x] **Multi-language system (EN DE IT FR ES)**
+- [x] Language documentation
 
 ## Phase 1 – Core Foundation (next)
 - [ ] Real FIRM boot code (ARM9 + ARM11)
@@ -34,6 +34,7 @@
 - [ ] Advanced safety + logging
 
 ## Phase 4 – Polish & Release
-- [ ] Custom splash + animations
+- [ ] Custom splash embedded
+- [ ] More languages (NL, PT, ...)
 - [ ] Full documentation
 - [ ] First public release
