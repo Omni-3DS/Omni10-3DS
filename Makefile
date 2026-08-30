@@ -1,8 +1,11 @@
 # Omni10-3DS Makefile
-# Requires: devkitARM + firmtool + Python 3
+# Requires (for real builds): devkitARM + firmtool + Python 3
 
+# Only include 3ds_rules when the file actually exists
 ifneq ($(strip $(DEVKITARM)),)
-include $(DEVKITARM)/3ds_rules
+  ifneq ($(wildcard $(DEVKITARM)/3ds_rules),)
+    include $(DEVKITARM)/3ds_rules
+  endif
 endif
 
 TARGET   := Omni10
@@ -12,7 +15,6 @@ INCLUDES := include
 DATA     := data
 ASSETS   := assets
 
-# Source files (will grow)
 CFILES   := $(wildcard $(SOURCES)/*.c)
 
 .PHONY: all firm clean release info
@@ -27,9 +29,12 @@ firm:
 	@echo "Sources found:"
 	@echo $(CFILES)
 	@echo ""
-	@echo "Note: Full FIRM linking requires the complete"
-	@echo "ARM9/ARM11 toolchain setup (devkitARM + firmtool)."
-	@echo "This is currently a development skeleton."
+	@if [ -n "$(DEVKITARM)" ] && [ -f "$(DEVKITARM)/3ds_rules" ]; then \
+		echo "devkitARM detected – real FIRM build would run here"; \
+	else \
+		echo "Note: Full FIRM linking requires devkitARM + firmtool."; \
+		echo "This is currently a development skeleton (placeholder)."; \
+	fi
 	@echo ""
 	@echo "Placeholder build finished."
 	@touch $(BUILD)/Omni10.firm
@@ -40,6 +45,8 @@ release: firm
 	@mkdir -p release
 	@cp $(BUILD)/Omni10.firm release/ 2>/dev/null || true
 	@cp -r scripts release/ 2>/dev/null || true
+	@cp -r assets release/ 2>/dev/null || true
+	@cp -r data release/ 2>/dev/null || true
 	@echo "Release folder ready."
 
 info:
@@ -48,6 +55,7 @@ info:
 	@echo "Sources:  $(SOURCES)"
 	@echo "Includes: $(INCLUDES)"
 	@echo "C files:  $(CFILES)"
+	@echo "DEVKITARM=$(DEVKITARM)"
 
 clean:
 	@rm -rf $(BUILD) release
