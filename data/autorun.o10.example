@@ -1,0 +1,5 @@
+# Omni10 Autorun Example
+# Rename to autorun.o10 and place in data/ (or SD) to run on boot
+
+echo "Omni10 Autorun"
+echo "Edit this script to run tasks automatically on startup."
