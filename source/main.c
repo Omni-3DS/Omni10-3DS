@@ -13,6 +13,7 @@
 #include "o10.h"
 #include "sys.h"
 #include "splash.h"
+#include "lang.h"
 
 int main(int argc, char** argv)
 {
@@ -21,6 +22,7 @@ int main(int argc, char** argv)
 
     // Initialize core systems
     sys_init();
+    lang_init();
     ui_init();
     fs_init();
     net_init();
@@ -31,16 +33,17 @@ int main(int argc, char** argv)
     splash_show();
 
     // TODO: Mount SD + NAND partitions
-    // TODO: Check for autorun script (data/autorun.o10 or autorun.lua)
+    // TODO: Load language from config
+    // TODO: Check for autorun script
     // TODO: Start main file browser / UI loop
 
-    ui_echo("Omni10-3DS " OMNI10_VERSION_STRING);
-    ui_echo("Full Access. No Limits.");
+    ui_echo(_("APP_NAME"));
+    ui_echo(_("TAGLINE"));
+    ui_echo(_("BOOTING"));
 
     // Main loop placeholder
     // while (running) {
     //     ui_handle_input();
-    //     // file browser, scripts menu, etc.
     // }
 
     // Cleanup
@@ -49,6 +52,7 @@ int main(int argc, char** argv)
     net_deinit();
     fs_deinit();
     ui_deinit();
+    lang_deinit();
     sys_deinit();
 
     return 0;
