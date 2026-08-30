@@ -1,15 +1,22 @@
 # Data / Bundled Assets
 
-Files placed here can be embedded into the final `.firm` at build time.
+Files in this folder can be embedded into the final `.firm` at build time.
 
-## Planned contents
+## Current contents
 
-- `splash.bin` / splash images
-- `autorun.o10` or `autorun.lua`
-- Fonts
+| File                    | Description                          |
+|-------------------------|--------------------------------------|
+| `config.default.ini`    | Default configuration                |
+| `autorun.o10.example`   | Example autorun script               |
+
+## Planned / to add
+
+- `splash.png` (or converted binary) – official splash
+- `autorun.o10` / `autorun.lua` – real autorun
+- Fonts (FRF / bitmap)
 - Default themes
 - Built-in scripts
 
 ## Usage
 
-The Makefile will later convert and embed these assets automatically.
+The Makefile will later convert and embed these assets automatically into the FIRM (similar to GodMode9 VRAM0).
