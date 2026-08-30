@@ -16,22 +16,41 @@ It aims to be significantly more powerful and modern than GodMode9 while keeping
 - Better safety features and logging
 - ARM9 + ARM11 cooperation for advanced features
 
-## Status
+## Project Structure
 
-**Very early development / planning stage.**
-
-This repository currently contains the project skeleton, documentation and CI setup. The actual firmware code is being developed.
+```
+Omni10-3DS/
+├── .github/workflows/     # GitHub Actions CI
+├── assets/
+│   └── splash/            # Splash screen images & logo
+├── docs/
+│   ├── lua-api.md         # Full Lua API documentation
+│   ├── o10-scripting.md   # .o10 language documentation
+│   └── ROADMAP.md         # Development roadmap
+├── include/               # Header files
+├── scripts/
+│   └── examples/          # Example .o10 and .lua scripts
+├── source/                # Actual source code (coming soon)
+├── Makefile
+├── LICENSE                # GPL-3.0
+└── README.md
+```
 
 ## Scripting
 
-- Primary scripting format: **`.o10`**
-- Full Lua 5.4 support with an extended API
-- Easy automation of complex tasks
+### Native `.o10` Scripts
+High-level, easy to read automation language.  
+→ See [docs/o10-scripting.md](docs/o10-scripting.md)
+
+### Lua 5.4
+Full power with a clean and extended API (`ui`, `fs`, `sys`, `net`, `nand`, `title`…).  
+→ See [docs/lua-api.md](docs/lua-api.md)
+
+Example scripts are available in `scripts/examples/`.
 
 ## Building
 
-Building requires:
-
+**Requirements:**
 - [devkitARM](https://devkitpro.org/)
 - firmtool
 - Python 3
@@ -40,12 +59,22 @@ Building requires:
 make firm
 ```
 
-GitHub Actions CI is set up to automatically build on every push (once the full source is present).
+GitHub Actions automatically builds on every push to `main` / `develop`.
+
+## Status
+
+**Early development / project skeleton**
+
+- Repository & CI ✓
+- Documentation ✓
+- Example scripts ✓
+- Splash assets folder ✓
+- Real source code → in progress
 
 ## License
 
-GPL-3.0 (same spirit as GodMode9 – free and open source)
+GPL-3.0
 
 ## Credits
 
-Inspired by the excellent work of d0k3 and the entire 3DS homebrew community.
+Inspired by the excellent work of **d0k3** and the entire 3DS homebrew community.
