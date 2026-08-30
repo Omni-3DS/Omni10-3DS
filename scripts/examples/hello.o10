@@ -1,0 +1,17 @@
+# Omni10 Example Script – Hello World
+
+echo "=============================="
+echo "   Welcome to Omni10-3DS"
+echo "=============================="
+echo ""
+echo "This is a native .o10 script."
+echo ""
+
+if ask "Do you want to continue?"
+    echo "Great! Omni10 is ready."
+else
+    echo "Okay, maybe next time."
+end
+
+echo ""
+echo "Script finished."
