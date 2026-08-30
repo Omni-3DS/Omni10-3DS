@@ -1,0 +1,28 @@
+# Build artifacts
+*.o
+*.a
+*.elf
+*.bin
+*.firm
+*.3dsx
+*.smdh
+*.cia
+*.nds
+out/
+build/
+*.map
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Temporary
+*.tmp
+*.log
