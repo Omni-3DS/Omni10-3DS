@@ -1,21 +1,27 @@
-# Splash Screen Assets
+# Omni10-3DS Splash Screen
 
-This folder contains the splash screen assets for Omni10-3DS.
+## Official Design (locked)
 
-## Planned files
+**Style:** Classic GodMode9-inspired  
+**Resolution:** 400 × 240 (Top Screen)  
+**Background:** Pure black (`#000000`)  
+**Font:** Bold pixel / bitmap-style (same feel as GodMode9)  
 
-- `splash.png` / `splash.bmp` – Main splash image (top screen)
-- `splash_bottom.png` – Optional bottom screen image
-- `logo.png` – Logo used in UI and splash
-- `animation/` – Optional animation frames
+**Text:**
+- Main logo: `Omni10-3DS` (large, bold, white)
+- Subtitle: `Full Access. No Limits.` (smaller, gray)
 
-## Recommendations
+## Files
 
-- Top screen resolution: **400×240**
-- Bottom screen resolution: **320×240**
-- Prefer 24-bit or 32-bit images
-- Keep file size reasonable for fast boot
+| File                | Size       | Description                     |
+|---------------------|------------|---------------------------------|
+| `splash.png`        | 400×240    | Main top screen splash          |
+| `splash_bottom.png` | 320×240    | Optional bottom screen          |
+| `logo.png`          | variable   | Small logo for UI               |
 
-## Current Status
+## Status
 
-Placeholder – real splash assets will be added later.
+Design is final.  
+Export the approved pixel-style image as `splash.png` and place it in this folder.
+
+The build system will embed it into the `.firm` later.
