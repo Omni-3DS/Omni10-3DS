@@ -1,17 +1,20 @@
 /*
- * Omni10-3DS – minimal bootable ARM9 payload
- * Build pattern taken from SlabyLol/3DSFirm (your working firm)
+ * Omni10-3DS ARM9 payload
+ * Same bare-metal pattern as SlabyLol/3DSFirm (proven loadable firm)
  */
 
 #include <stdint.h>
 #include <stddef.h>
 
-#define REG_PDN_CLKEN0   (*(volatile uint32_t *)0x10141000)
-#define TOP_SCREEN_PADDR 0x18000000
+#define REG_PDN_CLKEN0    (*(volatile uint32_t *)0x10141000)
+#define REG_PAD_HID       (*(volatile uint32_t *)0x10146000)
+#define TOP_SCREEN_PADDR  0x18000000
 
-/* Native framebuffer orientation used in 3DSFirm */
-#define SCREEN_WIDTH  240
-#define SCREEN_HEIGHT 400
+#define SCREEN_WIDTH      240
+#define SCREEN_HEIGHT     400
+
+#define BUTTON_LEFT       (1u << 5)
+#define BUTTON_RIGHT      (1u << 4)
 
 void *memset(void *dest, int val, size_t count)
 {
@@ -28,13 +31,13 @@ void memset32(void *dest, uint32_t val, uint32_t words)
         *p++ = val;
 }
 
-void delay(int count)
+static void delay(int count)
 {
     for (volatile int i = 0; i < count; i++)
-        __asm__("nop");
+        __asm__ volatile("nop");
 }
 
-void draw_rect(int x, int y, int w, int h, uint32_t color)
+static void draw_rect(int x, int y, int w, int h, uint32_t color)
 {
     uint32_t *vram = (uint32_t *)TOP_SCREEN_PADDR;
     for (int i = 0; i < h; i++) {
@@ -50,17 +53,36 @@ void draw_rect(int x, int y, int w, int h, uint32_t color)
 int main(void)
 {
     REG_PDN_CLKEN0 |= (1u << 11);
-    delay(5000);
+    delay(8000);
 
     uint32_t *fb = (uint32_t *)TOP_SCREEN_PADDR;
-    uint32_t total = SCREEN_WIDTH * SCREEN_HEIGHT;
+    uint32_t total = (uint32_t)SCREEN_WIDTH * (uint32_t)SCREEN_HEIGHT;
 
-    /* Black screen + simple Omni10 marker bar */
-    memset32(fb, 0x00000000, total);
-    draw_rect(20, 180, 200, 40, 0x001F3F7F); /* blue bar */
+    int bar_x = 100;
+    const int bar_y = 350;
+    const int bar_w = 40;
+    const int bar_h = 10;
 
     while (1) {
-        delay(100000);
+        memset32(fb, 0x00000000u, total);
+
+        draw_rect(bar_x, bar_y, bar_w, bar_h, 0x001F3F7Fu);
+        draw_rect(0, 0, 8, 8, 0x000000FFu);
+        draw_rect(SCREEN_WIDTH - 8, 0, 8, 8, 0x0000FF00u);
+
+        uint32_t kDown = ~REG_PAD_HID;
+        if (kDown & BUTTON_LEFT) {
+            bar_x -= 4;
+            if (bar_x < 0)
+                bar_x = 0;
+        }
+        if (kDown & BUTTON_RIGHT) {
+            bar_x += 4;
+            if (bar_x > SCREEN_WIDTH - bar_w)
+                bar_x = SCREEN_WIDTH - bar_w;
+        }
+
+        delay(40000);
     }
 
     return 0;
