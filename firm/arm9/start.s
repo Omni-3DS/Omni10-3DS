@@ -1,30 +1,25 @@
-/*
- * Omni10 ARM9 entry
- * Luma chainloader jumps here with:
- *   r0 = argc
- *   r1 = argv
- */
-
 .section .text.startup, "ax", %progbits
 .global _start
 .type _start, %function
 .align 4
 
 _start:
-    /* Stack at end of our image RAM */
     ldr sp, =_stack_top
-
-    /* Keep argc/argv for main (r0, r1 already set by Luma) */
+    mov r4, r0
+    mov r5, r1
+    mov r0, #0
+    mcr p15, 0, r0, c7, c5, 0
+    mcr p15, 0, r0, c7, c6, 0
+    mcr p15, 0, r0, c7, c10, 4
+    mov r0, r4
+    mov r1, r5
     bl  main
-
 .hang:
     b   .hang
-
 .size _start, . - _start
 
-/* 8KB stack in BSS */
 .section .bss
 .align 3
-.space 0x2000
+.space 0x4000
 .global _stack_top
 _stack_top:
