@@ -1,10 +1,12 @@
 /*
  * Omni10-3DS ARM9 payload
  *
- * Luma3DS chainload passes:
+ * Luma chainload:
  *   argv[0] = path
- *   argv[1] = pointer to framebuffers { top_left, top_right, bottom }
- * Writing to fixed 0x18000000 often freezes under Luma – use argv FBs.
+ *   argv[1] = framebuffers { top_left, top_right, bottom }  (argc >= 2)
+ *
+ * FIRM header reserved2[0] bit0 must be set so Luma calls initScreens()
+ * and passes argc=2. See Makefile post-firmtool patch at offset 0x10.
  */
 
 #include <stdint.h>
@@ -22,8 +24,8 @@
 
 static uint16_t *g_top;
 static uint16_t *g_bot;
+static int g_have_fb;
 
-/* Required: gcc -O2 + -nostdlib may emit calls to memset */
 void *memset(void *dest, int val, size_t count)
 {
     uint8_t *ptr = (uint8_t *)dest;
@@ -63,14 +65,18 @@ static void fb_rect(uint16_t *fb, int w, int h, int x, int y, int rw, int rh, ui
 
 int main(int argc, char **argv)
 {
-    g_top = (uint16_t *)0x18300000;
-    g_bot = (uint16_t *)0x18346500;
+    g_top = 0;
+    g_bot = 0;
+    g_have_fb = 0;
 
-    if (argc >= 2 && argv[1]) {
+    /* Only use FBs from Luma – never guess physical addresses (causes freeze) */
+    if (argc >= 2 && argv != 0 && argv[1] != 0) {
         uint32_t *fbs = (uint32_t *)argv[1];
-        if (fbs[0])
+        if (fbs[0] != 0) {
             g_top = (uint16_t *)fbs[0];
-        if (fbs[2])
+            g_have_fb = 1;
+        }
+        if (fbs[2] != 0)
             g_bot = (uint16_t *)fbs[2];
     }
 
@@ -85,25 +91,27 @@ int main(int argc, char **argv)
     const uint16_t COL_GRN = RGB565(0, 63, 0);
 
     while (1) {
-        fb_clear(g_top, TOP_W, TOP_H, COL_BG);
-        fb_rect(g_top, TOP_W, TOP_H, bar_x, bar_y, bar_w, bar_h, COL_BAR);
-        fb_rect(g_top, TOP_W, TOP_H, 0, 0, 10, 10, COL_RED);
-        fb_rect(g_top, TOP_W, TOP_H, TOP_W - 10, 0, 10, 10, COL_GRN);
+        if (g_have_fb) {
+            fb_clear(g_top, TOP_W, TOP_H, COL_BG);
+            fb_rect(g_top, TOP_W, TOP_H, bar_x, bar_y, bar_w, bar_h, COL_BAR);
+            fb_rect(g_top, TOP_W, TOP_H, 0, 0, 10, 10, COL_RED);
+            fb_rect(g_top, TOP_W, TOP_H, TOP_W - 10, 0, 10, 10, COL_GRN);
+            if (g_bot)
+                fb_clear(g_bot, 240, 320, COL_BG);
 
-        if (g_bot)
-            fb_clear(g_bot, 240, 320, COL_BG);
-
-        uint32_t k = ~REG_PAD_HID;
-        if (k & BUTTON_LEFT) {
-            bar_x -= 4;
-            if (bar_x < 0)
-                bar_x = 0;
+            uint32_t k = ~REG_PAD_HID;
+            if (k & BUTTON_LEFT) {
+                bar_x -= 4;
+                if (bar_x < 0)
+                    bar_x = 0;
+            }
+            if (k & BUTTON_RIGHT) {
+                bar_x += 4;
+                if (bar_x > TOP_W - bar_w)
+                    bar_x = TOP_W - bar_w;
+            }
         }
-        if (k & BUTTON_RIGHT) {
-            bar_x += 4;
-            if (bar_x > TOP_W - bar_w)
-                bar_x = TOP_W - bar_w;
-        }
+        /* else: no FB – idle loop only (black screen, but no data abort) */
 
         delay(25000);
     }
