@@ -1,10 +1,10 @@
 /*
- * Omni10 – dual framebuffer + PIXEL_OFFSET
- * idx = x * 240 + (239 - y)   x:0..399  y:0..239
+ * Omni10 – draw + START+SELECT power off
  */
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 #define REG_PAD_HID (*(volatile uint32_t *)0x10146000)
 
@@ -16,13 +16,88 @@
 #define FB_BOT0 ((volatile uint16_t *)0x18346500)
 #define FB_BOT1 ((volatile uint16_t *)0x18446500)
 
-#define BTN_LEFT  (1u << 5)
-#define BTN_RIGHT (1u << 4)
+#define BTN_A      (1u << 0)
+#define BTN_B      (1u << 1)
+#define BTN_SELECT (1u << 2)
+#define BTN_START  (1u << 3)
+#define BTN_RIGHT  (1u << 4)
+#define BTN_LEFT   (1u << 5)
 
 #define RGB565(r, g, b) ((uint16_t)(((r) & 0x1F) << 11 | ((g) & 0x3F) << 5 | ((b) & 0x1F)))
-
 #define PIXEL_OFFSET(x, y) (((x) * SCREEN_H) + (SCREEN_H - (y) - 1))
 
+/* ---- minimal I2C (MCU power off) ---- */
+#define I2C2_REGS_BASE 0x10144000
+
+#define I2C_ENABLE     (1u << 7)
+#define I2C_IRQ_ENABLE (1u << 6)
+#define I2C_START      (1u << 5)
+#define I2C_STOP       (1u << 4)
+#define I2C_ERROR      (1u << 1)
+#define I2C_ACK        (1u << 2)
+#define I2C_DIRE_WRITE 0
+#define I2C_GET_ACK(r) (((r) >> 4) & 1u)
+
+typedef struct {
+    volatile uint8_t  REG_I2C_DATA;
+    volatile uint8_t  REG_I2C_CNT;
+    volatile uint16_t REG_I2C_CNTEX;
+    volatile uint16_t REG_I2C_SCL;
+} I2cRegs;
+
+/* MCU = device 3, bus 1, addr 0x4A */
+#define MCU_DEV_ADDR 0x4A
+
+static void i2c_wait(I2cRegs *regs)
+{
+    while (regs->REG_I2C_CNT & I2C_ENABLE)
+        ;
+}
+
+static bool i2c_write_mcu(uint8_t reg, uint8_t data)
+{
+    I2cRegs *regs = (I2cRegs *)I2C2_REGS_BASE;
+    int tries;
+
+    for (tries = 0; tries < 8; tries++) {
+        i2c_wait(regs);
+        regs->REG_I2C_DATA = MCU_DEV_ADDR;
+        regs->REG_I2C_CNT = I2C_ENABLE | I2C_IRQ_ENABLE | I2C_START;
+        i2c_wait(regs);
+        if (!I2C_GET_ACK(regs->REG_I2C_CNT)) {
+            regs->REG_I2C_CNT = I2C_ENABLE | I2C_IRQ_ENABLE | I2C_ERROR | I2C_STOP;
+            continue;
+        }
+
+        regs->REG_I2C_DATA = reg;
+        regs->REG_I2C_CNT = I2C_ENABLE | I2C_IRQ_ENABLE | I2C_DIRE_WRITE;
+        i2c_wait(regs);
+        if (!I2C_GET_ACK(regs->REG_I2C_CNT)) {
+            regs->REG_I2C_CNT = I2C_ENABLE | I2C_IRQ_ENABLE | I2C_ERROR | I2C_STOP;
+            continue;
+        }
+
+        regs->REG_I2C_DATA = data;
+        regs->REG_I2C_CNT = I2C_ENABLE | I2C_IRQ_ENABLE | I2C_DIRE_WRITE | I2C_STOP;
+        i2c_wait(regs);
+        if (!I2C_GET_ACK(regs->REG_I2C_CNT)) {
+            regs->REG_I2C_CNT = I2C_ENABLE | I2C_IRQ_ENABLE | I2C_ERROR | I2C_STOP;
+            continue;
+        }
+        return true;
+    }
+    return false;
+}
+
+static void power_off(void)
+{
+    /* MCU reg 0x20 bit0 = power off */
+    i2c_write_mcu(0x20, 1);
+    while (1)
+        ;
+}
+
+/* ---- FB ---- */
 struct fb {
     uint8_t *top_left;
     uint8_t *top_right;
@@ -171,6 +246,15 @@ int main(int argc, char **argv)
         drain();
 
         uint32_t k = ~REG_PAD_HID;
+
+        /* START + SELECT → power off */
+        if ((k & BTN_START) && (k & BTN_SELECT)) {
+            clear_top(BLK);
+            clear_bot(BLK);
+            drain();
+            power_off();
+        }
+
         if (k & BTN_LEFT) {
             bar_x -= 4;
             if (bar_x < 0)
