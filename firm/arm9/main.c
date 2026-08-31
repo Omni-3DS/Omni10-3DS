@@ -12,18 +12,25 @@
 
 #define REG_PAD_HID (*(volatile uint32_t *)0x10146000)
 
-/* Screen in portrait FB layout (240 wide x 400 tall for top) */
 #define TOP_W 240
 #define TOP_H 400
 
 #define BUTTON_LEFT  (1u << 5)
 #define BUTTON_RIGHT (1u << 4)
 
-/* RGB565 helpers */
 #define RGB565(r, g, b) ((uint16_t)(((r) & 0x1F) << 11 | ((g) & 0x3F) << 5 | ((b) & 0x1F)))
 
 static uint16_t *g_top;
 static uint16_t *g_bot;
+
+/* Required: gcc -O2 + -nostdlib may emit calls to memset */
+void *memset(void *dest, int val, size_t count)
+{
+    uint8_t *ptr = (uint8_t *)dest;
+    while (count--)
+        *ptr++ = (uint8_t)val;
+    return dest;
+}
 
 static void delay(int n)
 {
@@ -56,7 +63,6 @@ static void fb_rect(uint16_t *fb, int w, int h, int x, int y, int rw, int rh, ui
 
 int main(int argc, char **argv)
 {
-    /* Defaults if not chainloaded from Luma */
     g_top = (uint16_t *)0x18300000;
     g_bot = (uint16_t *)0x18346500;
 
@@ -73,10 +79,10 @@ int main(int argc, char **argv)
     const int bar_w = 40;
     const int bar_h = 12;
 
-    const uint16_t COL_BG   = RGB565(0, 0, 0);
-    const uint16_t COL_BAR  = RGB565(0, 20, 31);  /* blue-ish */
-    const uint16_t COL_RED  = RGB565(31, 0, 0);
-    const uint16_t COL_GRN  = RGB565(0, 63, 0);
+    const uint16_t COL_BG  = RGB565(0, 0, 0);
+    const uint16_t COL_BAR = RGB565(0, 20, 31);
+    const uint16_t COL_RED = RGB565(31, 0, 0);
+    const uint16_t COL_GRN = RGB565(0, 63, 0);
 
     while (1) {
         fb_clear(g_top, TOP_W, TOP_H, COL_BG);
