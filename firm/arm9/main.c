@@ -56,7 +56,6 @@ static volatile uint8_t *g_bot[2];
 static int g_n_top;
 static int g_n_bot;
 
-/* ---- libc stubs ---- */
 void *memset(void *dest, int val, size_t count)
 {
     uint8_t *p = (uint8_t *)dest;
@@ -73,7 +72,6 @@ static int strlen_s(const char *s)
     return n;
 }
 
-/* ---- I2C / power ---- */
 static void i2c_wait(I2cRegs *regs)
 {
     while (regs->REG_I2C_CNT & I2C_ENABLE)
@@ -116,7 +114,6 @@ static void power_off(void)
         ;
 }
 
-/* ---- timing / cache ---- */
 static void drain(void)
 {
     uint32_t z = 0;
@@ -129,10 +126,10 @@ static void delay(int n)
         __asm__ volatile("nop");
 }
 
-/* ---- 8x8 font (ASCII 0x20-0x5F) ---- */
+/* 8x8 font ASCII 0x20-0x5F (space .. underscore) */
 static const uint8_t font8[64][8] = {
-    {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}, /* space */
-    {0x18,0x3C,0x3C,0x18,0x18,0x00,0x18,0x00}, /* ! */
+    {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},
+    {0x18,0x3C,0x3C,0x18,0x18,0x00,0x18,0x00},
     {0x36,0x36,0x00,0x00,0x00,0x00,0x00,0x00},
     {0x36,0x36,0x7F,0x36,0x7F,0x36,0x36,0x00},
     {0x0C,0x3E,0x03,0x1E,0x30,0x1F,0x0C,0x00},
@@ -147,7 +144,7 @@ static const uint8_t font8[64][8] = {
     {0x00,0x00,0x00,0x3F,0x00,0x00,0x00,0x00},
     {0x00,0x00,0x00,0x00,0x00,0x0C,0x0C,0x00},
     {0x60,0x30,0x18,0x0C,0x06,0x03,0x01,0x00},
-    {0x3E,0x63,0x73,0x7B,0x6F,0x67,0x3E,0x00}, /* 0 */
+    {0x3E,0x63,0x73,0x7B,0x6F,0x67,0x3E,0x00},
     {0x0C,0x0E,0x0C,0x0C,0x0C,0x0C,0x3F,0x00},
     {0x1E,0x33,0x30,0x1C,0x06,0x33,0x3F,0x00},
     {0x1E,0x33,0x30,0x1C,0x30,0x33,0x1E,0x00},
@@ -164,7 +161,7 @@ static const uint8_t font8[64][8] = {
     {0x06,0x0C,0x18,0x30,0x18,0x0C,0x06,0x00},
     {0x1E,0x33,0x30,0x18,0x0C,0x00,0x0C,0x00},
     {0x3E,0x63,0x7B,0x7B,0x7B,0x03,0x1E,0x00},
-    {0x0C,0x1E,0x33,0x33,0x3F,0x33,0x33,0x00}, /* A */
+    {0x0C,0x1E,0x33,0x33,0x3F,0x33,0x33,0x00},
     {0x3F,0x66,0x66,0x3E,0x66,0x66,0x3F,0x00},
     {0x3C,0x66,0x03,0x03,0x03,0x66,0x3C,0x00},
     {0x1F,0x36,0x66,0x66,0x66,0x36,0x1F,0x00},
@@ -197,7 +194,6 @@ static const uint8_t font8[64][8] = {
     {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF},
 };
 
-/* ---- draw ---- */
 static void put(int x, int y, uint8_t r, uint8_t g, uint8_t b)
 {
     if (x < 0 || y < 0 || x >= SCREEN_W || y >= SCREEN_H)
@@ -236,7 +232,10 @@ static void clear_bot(void)
 
 static void draw_char(int x, int y, char c, uint8_t r, uint8_t g, uint8_t b)
 {
-    int idx = (int)(unsigned char)c - 0x20;
+    unsigned char uc = (unsigned char)c;
+    if (uc >= 'a' && uc <= 'z')
+        uc = (unsigned char)(uc - 32);
+    int idx = (int)uc - 0x20;
     if (idx < 0 || idx >= 64)
         idx = 0;
     const uint8_t *glyph = font8[idx];
@@ -264,7 +263,6 @@ static void draw_text_centered(int y, const char *s, uint8_t r, uint8_t g, uint8
     draw_text((SCREEN_W - w) / 2, y, s, r, g, b);
 }
 
-/* ---- input ---- */
 static uint32_t pad_raw(void)
 {
     return ~REG_PAD_HID;
@@ -284,7 +282,6 @@ static uint32_t wait_key(void)
     }
 }
 
-/* ---- screens ---- */
 static void draw_header(void)
 {
     fill_rect(0, 0, SCREEN_W, 28, 20, 20, 40);
@@ -302,12 +299,12 @@ static void screen_about(void)
 {
     clear_top(12, 12, 24);
     draw_header();
-    draw_text_centered(60, "Omni10-3DS", 255, 255, 255);
-    draw_text_centered(80, "Custom FIRM Payload", 160, 200, 220);
-    draw_text_centered(110, "Version 0.1.0", 140, 140, 160);
-    draw_text_centered(140, ".o10 scripts  |  FTP", 120, 180, 200);
-    draw_text_centered(170, "github.com/Omni-3DS", 100, 140, 180);
-    draw_footer("B = back");
+    draw_text_centered(60, "OMNI10-3DS", 255, 255, 255);
+    draw_text_centered(80, "CUSTOM FIRM PAYLOAD", 160, 200, 220);
+    draw_text_centered(110, "VERSION 0.1.0", 140, 140, 160);
+    draw_text_centered(140, ".O10 SCRIPTS  |  FTP", 120, 180, 200);
+    draw_text_centered(170, "GITHUB.COM/OMNI-3DS", 100, 140, 180);
+    draw_footer("B = BACK");
     clear_bot();
     drain();
 
@@ -323,11 +320,11 @@ static void screen_about(void)
 static void screen_menu(void)
 {
     static const char *items[] = {
-        "About Omni10",
-        "File Browser  (soon)",
-        "Scripts .o10  (soon)",
-        "FTP Server    (soon)",
-        "Power Off",
+        "ABOUT OMNI10",
+        "FILE BROWSER  (SOON)",
+        "SCRIPTS .O10  (SOON)",
+        "FTP SERVER    (SOON)",
+        "POWER OFF",
     };
     const int n = 5;
     int sel = 0;
@@ -335,7 +332,7 @@ static void screen_menu(void)
     while (1) {
         clear_top(12, 12, 24);
         draw_header();
-        draw_text_centered(40, "Main Menu", 200, 220, 255);
+        draw_text_centered(40, "MAIN MENU", 200, 220, 255);
 
         for (int i = 0; i < n; i++) {
             int y = 70 + i * 22;
@@ -347,7 +344,7 @@ static void screen_menu(void)
             }
         }
 
-        draw_footer("A select  |  START+SELECT power");
+        draw_footer("A SELECT  |  START+SELECT POWER");
         clear_bot();
         drain();
 
@@ -369,7 +366,6 @@ static void screen_menu(void)
                 screen_about();
             else if (sel == 4)
                 power_off();
-            /* others: soon */
         }
     }
 }
@@ -402,10 +398,9 @@ int main(int argc, char **argv)
         }
     }
 
-    /* brief splash */
     clear_top(8, 8, 20);
     draw_text_centered(100, "OMNI10", 0, 220, 255);
-    draw_text_centered(120, "booting...", 120, 140, 180);
+    draw_text_centered(120, "BOOTING...", 120, 140, 180);
     clear_bot();
     drain();
     delay(800000);
