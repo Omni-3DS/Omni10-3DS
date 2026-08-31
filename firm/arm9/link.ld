@@ -4,34 +4,30 @@ ENTRY(_start)
 
 MEMORY
 {
-    ram (rwx) : ORIGIN = 0x08000000, LENGTH = 96K
+    ram (rwx) : ORIGIN = 0x08000040, LENGTH = 96K - 0x40
 }
 
 SECTIONS
 {
     .text :
     {
-        *(.text.startup)
-        *(.text)
-        *(.text.*)
-        *(.rodata)
-        *(.rodata.*)
+        KEEP(*(.text.startup))
+        *(.text*)
+        *(.rodata*)
         . = ALIGN(4);
     } > ram
 
     .data :
     {
-        *(.data)
-        *(.data.*)
+        *(.data*)
         . = ALIGN(4);
     } > ram
 
     .bss :
     {
-        *(.bss)
-        *(.bss.*)
+        *(.bss*)
         *(COMMON)
-        . = ALIGN(4);
+        . = ALIGN(8);
     } > ram
 
     /DISCARD/ :
