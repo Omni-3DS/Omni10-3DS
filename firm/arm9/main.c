@@ -1,7 +1,6 @@
 /*
- * Omni10 draw – standard 3DS top FB layout:
- *   PIXEL_OFFSET(x,y) = x * 240 + (239 - y)
- *   x: 0..399  y: 0..239
+ * Omni10 – dual framebuffer + PIXEL_OFFSET
+ * idx = x * 240 + (239 - y)   x:0..399  y:0..239
  */
 
 #include <stdint.h>
@@ -12,8 +11,10 @@
 #define SCREEN_W 400
 #define SCREEN_H 240
 
-#define FB_TOP ((volatile uint16_t *)0x18300000)
-#define FB_BOT ((volatile uint16_t *)0x18346500)
+#define FB_TOP0 ((volatile uint16_t *)0x18300000)
+#define FB_TOP1 ((volatile uint16_t *)0x18400000)
+#define FB_BOT0 ((volatile uint16_t *)0x18346500)
+#define FB_BOT1 ((volatile uint16_t *)0x18446500)
 
 #define BTN_LEFT  (1u << 5)
 #define BTN_RIGHT (1u << 4)
@@ -28,8 +29,10 @@ struct fb {
     uint8_t *bottom;
 };
 
-static volatile uint16_t *g_top;
-static volatile uint16_t *g_bot;
+static volatile uint16_t *g_top[2];
+static volatile uint16_t *g_bot[2];
+static int g_n_top;
+static int g_n_bot;
 
 void *memset(void *dest, int val, size_t count)
 {
@@ -53,21 +56,25 @@ static void delay(int n)
 
 static void put(int x, int y, uint16_t c)
 {
-    if (!g_top || x < 0 || y < 0 || x >= SCREEN_W || y >= SCREEN_H)
+    if (x < 0 || y < 0 || x >= SCREEN_W || y >= SCREEN_H)
         return;
-    g_top[PIXEL_OFFSET(x, y)] = c;
+    int idx = PIXEL_OFFSET(x, y);
+    for (int i = 0; i < g_n_top; i++)
+        if (g_top[i])
+            g_top[i][idx] = c;
 }
 
-/* Fast clear via 32-bit stores */
 static void clear_top(uint16_t color)
 {
-    if (!g_top)
-        return;
     uint32_t c32 = ((uint32_t)color << 16) | color;
-    volatile uint32_t *p = (volatile uint32_t *)g_top;
     int n = (SCREEN_W * SCREEN_H) / 2;
-    for (int i = 0; i < n; i++)
-        p[i] = c32;
+    for (int t = 0; t < g_n_top; t++) {
+        if (!g_top[t])
+            continue;
+        volatile uint32_t *p = (volatile uint32_t *)g_top[t];
+        for (int i = 0; i < n; i++)
+            p[i] = c32;
+    }
 }
 
 static void rect(int x, int y, int w, int h, uint16_t c)
@@ -77,17 +84,45 @@ static void rect(int x, int y, int w, int h, uint16_t c)
             put(x + i, y + j, c);
 }
 
+static void clear_bot(uint16_t color)
+{
+    uint32_t c32 = ((uint32_t)color << 16) | color;
+    int n = (240 * 320) / 2;
+    for (int t = 0; t < g_n_bot; t++) {
+        if (!g_bot[t])
+            continue;
+        volatile uint32_t *p = (volatile uint32_t *)g_bot[t];
+        for (int i = 0; i < n; i++)
+            p[i] = c32;
+    }
+}
+
 int main(int argc, char **argv)
 {
-    g_top = FB_TOP;
-    g_bot = FB_BOT;
+    g_top[0] = FB_TOP0;
+    g_top[1] = FB_TOP1;
+    g_bot[0] = FB_BOT0;
+    g_bot[1] = FB_BOT1;
+    g_n_top = 2;
+    g_n_bot = 2;
 
     if (argc >= 2 && argv && argv[1]) {
         struct fb *fbs = (struct fb *)argv[1];
+        g_n_top = 0;
+        g_n_bot = 0;
         if (fbs[0].top_left)
-            g_top = (volatile uint16_t *)fbs[0].top_left;
+            g_top[g_n_top++] = (volatile uint16_t *)fbs[0].top_left;
+        if (fbs[1].top_left)
+            g_top[g_n_top++] = (volatile uint16_t *)fbs[1].top_left;
         if (fbs[0].bottom)
-            g_bot = (volatile uint16_t *)fbs[0].bottom;
+            g_bot[g_n_bot++] = (volatile uint16_t *)fbs[0].bottom;
+        if (fbs[1].bottom)
+            g_bot[g_n_bot++] = (volatile uint16_t *)fbs[1].bottom;
+        if (g_n_top == 0) {
+            g_top[0] = FB_TOP0;
+            g_top[1] = FB_TOP1;
+            g_n_top = 2;
+        }
     }
 
     const uint16_t BLK = RGB565(0, 0, 0);
@@ -95,20 +130,14 @@ int main(int argc, char **argv)
     const uint16_t GRN = RGB565(0, 63, 0);
     const uint16_t BLU = RGB565(0, 0, 31);
     const uint16_t WHT = RGB565(31, 63, 31);
-    const uint16_t CYN = RGB565(0, 50, 31);
+    const uint16_t CYN = RGB565(0, 55, 31);
 
-    /* Static background once – no full-screen flash every frame */
     clear_top(BLK);
     rect(0, 0, 200, 120, RED);
     rect(200, 0, 200, 120, GRN);
     rect(0, 120, 200, 120, BLU);
     rect(200, 120, 200, 120, WHT);
-    if (g_bot) {
-        uint32_t c32 = 0;
-        volatile uint32_t *p = (volatile uint32_t *)g_bot;
-        for (int i = 0; i < (240 * 320) / 2; i++)
-            p[i] = c32;
-    }
+    clear_bot(BLK);
     drain();
 
     int bar_x = 160;
@@ -118,7 +147,6 @@ int main(int argc, char **argv)
     const int bar_h = 28;
 
     while (1) {
-        /* erase old bar by redrawing underlay colors */
         if (prev_x >= 0 && prev_x != bar_x) {
             for (int j = 0; j < bar_h; j++) {
                 for (int i = 0; i < bar_w; i++) {
