@@ -1,6 +1,6 @@
 /*
  * Omni10-3DS – ARM9 payload
- * RGB888 Luma FB, PIXEL_OFFSET, 8x8 font, main menu
+ * RGB888 Luma FB, correct orientation, 8x8 font, main menu
  */
 
 #include <stdint.h>
@@ -26,7 +26,8 @@
 #define BTN_UP     (1u << 6)
 #define BTN_DOWN   (1u << 7)
 
-#define PIXEL_OFFSET(x, y) (((x) * SCREEN_H) + (SCREEN_H - (y) - 1))
+/* 180° corrected mapping for upright text on both O3DS / N2DS */
+#define PIXEL_OFFSET(x, y) (((SCREEN_W - 1 - (x)) * SCREEN_H) + (y))
 
 #define I2C2_REGS_BASE 0x10144000
 #define I2C_ENABLE     (1u << 7)
@@ -126,7 +127,6 @@ static void delay(int n)
         __asm__ volatile("nop");
 }
 
-/* 8x8 font ASCII 0x20-0x5F (space .. underscore) */
 static const uint8_t font8[64][8] = {
     {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},
     {0x18,0x3C,0x3C,0x18,0x18,0x00,0x18,0x00},
