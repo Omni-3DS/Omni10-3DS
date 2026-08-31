@@ -1,7 +1,7 @@
-# Omni10-3DS – real FIRM (3DSFirm pattern + Luma argv FBs)
+# Omni10-3DS – bootable FIRM for Luma chainload
+# Uses firmtool -i (suggest-screen-init) so Luma passes framebuffers
 
 CC      := arm-none-eabi-gcc
-AS      := arm-none-eabi-gcc
 OBJCOPY := arm-none-eabi-objcopy
 RM      := rm -f
 
@@ -13,9 +13,9 @@ ELF      := arm9.elf
 BIN      := arm9.bin
 TARGET   := Omni10.firm
 
-CFLAGS  := -Wall -O2 -marm -fomit-frame-pointer -nostdlib -march=armv5te -fno-builtin-memset
+CFLAGS  := -Wall -O2 -marm -fomit-frame-pointer -nostdlib -march=armv5te -fno-builtin-memset -fno-builtin-memcpy
 ASFLAGS := -marm -march=armv5te
-LDFLAGS := -T $(LINKER) -nostdlib
+LDFLAGS := -T $(LINKER) -nostdlib -Wl,--nmagic
 
 .PHONY: all clean firm check
 
@@ -24,17 +24,16 @@ all: firm
 firm: $(TARGET)
 
 $(TARGET): $(START_S) $(SOURCE) $(LINKER)
-	@echo "1/5 clean"
+	@echo "=== Omni10 FIRM build ==="
 	@$(RM) $(ELF) $(BIN) $(TARGET)
-	@echo "2/5 compile ARM9 (start.s + main.c)"
+	@echo "[1] compile"
 	$(CC) $(CFLAGS) $(ASFLAGS) $(LDFLAGS) $(START_S) $(SOURCE) -o $(ELF)
-	@echo "3/5 objcopy"
+	@echo "[2] binary"
 	$(OBJCOPY) -O binary $(ELF) $(BIN)
-	@echo "4/5 firmtool"
-	firmtool build $(TARGET) -D $(BIN) -n 0x08000000 -A 0x08000000 -C NDMA
-	@echo "5/5 Luma screen-init flag (reserved2[0] bit0 at FIRM+0x10)"
-	@printf '\x01' | dd of=$(TARGET) bs=1 seek=16 conv=notrunc 2>/dev/null
-	@ls -la $(BIN) $(TARGET)
+	@echo "[3] firmtool (-i = Luma screen init + argv framebuffers)"
+	firmtool build $(TARGET) -i -D $(BIN) -n 0x08000000 -A 0x08000000 -C NDMA
+	@echo "[4] sizes:"
+	@wc -c $(BIN) $(TARGET)
 	@echo "[OK] $(TARGET)"
 
 check:
