@@ -1,7 +1,7 @@
 /*
- * Omni10-3DS ARM9 – drawing in physical screen space
- * Top LCD: 400x240, FB stored rotated (stride 240)
- * pixel (sx,sy) -> fb[sx * 240 + (239 - sy)]
+ * Omni10 – diagnostic draw (fix FB orientation)
+ * Top physical: 400x240
+ * Try mapping: fb[x * 240 + y]
  */
 
 #include <stdint.h>
@@ -9,15 +9,18 @@
 
 #define REG_PAD_HID (*(volatile uint32_t *)0x10146000)
 
-#define SCREEN_W 400
-#define SCREEN_H 240
-#define FB_STRIDE 240
+#define SW 400
+#define SH 240
+#define ST 240
 
-#define FB_TOP_DEFAULT ((volatile uint16_t *)0x18300000)
-#define FB_BOT_DEFAULT ((volatile uint16_t *)0x18346500)
+#define FB_TOP ((volatile uint16_t *)0x18300000)
+#define FB_BOT ((volatile uint16_t *)0x18346500)
 
-#define BUTTON_LEFT  (1u << 5)
-#define BUTTON_RIGHT (1u << 4)
+#define BTN_LEFT  (1u << 5)
+#define BTN_RIGHT (1u << 4)
+#define BTN_UP    (1u << 6)
+#define BTN_DOWN  (1u << 7)
+#define BTN_A     (1u << 0)
 
 #define RGB565(r, g, b) ((uint16_t)(((r) & 0x1F) << 11 | ((g) & 0x3F) << 5 | ((b) & 0x1F)))
 
@@ -30,6 +33,9 @@ struct fb {
 static volatile uint16_t *g_top;
 static volatile uint16_t *g_bot;
 
+/* 0 = x*240+y, 1 = x*240+(239-y), 2 = y*400+x (unlikely) */
+static int g_map_mode;
+
 void *memset(void *dest, int val, size_t count)
 {
     uint8_t *p = (uint8_t *)dest;
@@ -38,10 +44,10 @@ void *memset(void *dest, int val, size_t count)
     return dest;
 }
 
-static void drain_write_buffer(void)
+static void drain(void)
 {
-    uint32_t zero = 0;
-    __asm__ volatile("mcr p15, 0, %0, c7, c10, 4" ::"r"(zero) : "memory");
+    uint32_t z = 0;
+    __asm__ volatile("mcr p15, 0, %0, c7, c10, 4" ::"r"(z) : "memory");
 }
 
 static void delay(int n)
@@ -50,44 +56,41 @@ static void delay(int n)
         __asm__ volatile("nop");
 }
 
-/* Physical top-screen pixel */
-static void put_top(int sx, int sy, uint16_t color)
+static void put(int x, int y, uint16_t c)
+{
+    if (!g_top || x < 0 || y < 0 || x >= SW || y >= SH)
+        return;
+    int idx;
+    if (g_map_mode == 1)
+        idx = x * ST + (SH - 1 - y);
+    else if (g_map_mode == 2)
+        idx = y * SW + x;
+    else
+        idx = x * ST + y;
+    if (idx >= 0 && idx < SW * ST)
+        g_top[idx] = c;
+}
+
+static void fill(uint16_t c)
 {
     if (!g_top)
         return;
-    if (sx < 0 || sx >= SCREEN_W || sy < 0 || sy >= SCREEN_H)
-        return;
-    g_top[sx * FB_STRIDE + (SCREEN_H - 1 - sy)] = color;
+    for (int i = 0; i < SW * ST; i++)
+        g_top[i] = c;
 }
 
-static void fill_top(uint16_t color)
-{
-    if (!g_top)
-        return;
-    for (int i = 0; i < SCREEN_W * FB_STRIDE; i++)
-        g_top[i] = color;
-}
-
-static void rect_top(int x, int y, int w, int h, uint16_t color)
+static void rect(int x, int y, int w, int h, uint16_t c)
 {
     for (int j = 0; j < h; j++)
         for (int i = 0; i < w; i++)
-            put_top(x + i, y + j, color);
-}
-
-static void fill_bot(uint16_t color)
-{
-    if (!g_bot)
-        return;
-    /* Bottom: 320x240 physical, FB often 240 stride x 320 */
-    for (int i = 0; i < 240 * 320; i++)
-        g_bot[i] = color;
+            put(x + i, y + j, c);
 }
 
 int main(int argc, char **argv)
 {
-    g_top = FB_TOP_DEFAULT;
-    g_bot = FB_BOT_DEFAULT;
+    g_top = FB_TOP;
+    g_bot = FB_BOT;
+    g_map_mode = 0;
 
     if (argc >= 2 && argv && argv[1]) {
         struct fb *fbs = (struct fb *)argv[1];
@@ -97,45 +100,52 @@ int main(int argc, char **argv)
             g_bot = (volatile uint16_t *)fbs[0].bottom;
     }
 
-    int bar_x = 170;
-    const int bar_y = 100;
-    const int bar_w = 60;
-    const int bar_h = 24;
+    const uint16_t BLK = RGB565(0, 0, 0);
+    const uint16_t RED = RGB565(31, 0, 0);
+    const uint16_t GRN = RGB565(0, 63, 0);
+    const uint16_t BLU = RGB565(0, 0, 31);
+    const uint16_t WHT = RGB565(31, 63, 31);
+    const uint16_t CYN = RGB565(0, 63, 31);
 
-    const uint16_t COL_BG  = RGB565(0, 0, 0);
-    const uint16_t COL_BAR = RGB565(0, 50, 31);
-    const uint16_t COL_RED = RGB565(31, 0, 0);
-    const uint16_t COL_GRN = RGB565(0, 63, 0);
-    const uint16_t COL_WHT = RGB565(31, 63, 31);
+    int bar_x = 150;
 
     while (1) {
-        fill_top(COL_BG);
+        fill(BLK);
 
-        /* Corners of physical 400x240 screen */
-        rect_top(0, 0, 20, 20, COL_RED);
-        rect_top(SCREEN_W - 20, 0, 20, 20, COL_GRN);
-        rect_top(0, SCREEN_H - 20, 20, 20, COL_WHT);
-        rect_top(SCREEN_W - 20, SCREEN_H - 20, 20, 20, COL_WHT);
+        /* 4 quadrants – must look like solid color blocks if mapping is right */
+        rect(0, 0, 200, 120, RED);
+        rect(200, 0, 200, 120, GRN);
+        rect(0, 120, 200, 120, BLU);
+        rect(200, 120, 200, 120, WHT);
 
-        rect_top(bar_x, bar_y, bar_w, bar_h, COL_BAR);
+        /* movable cyan bar on top of pattern */
+        rect(bar_x, 100, 80, 30, CYN);
 
-        fill_bot(COL_BG);
+        if (g_bot) {
+            for (int i = 0; i < 240 * 320; i++)
+                g_bot[i] = BLK;
+        }
 
-        drain_write_buffer();
+        drain();
 
         uint32_t k = ~REG_PAD_HID;
-        if (k & BUTTON_LEFT) {
-            bar_x -= 4;
+        if (k & BTN_LEFT) {
+            bar_x -= 5;
             if (bar_x < 0)
                 bar_x = 0;
         }
-        if (k & BUTTON_RIGHT) {
-            bar_x += 4;
-            if (bar_x > SCREEN_W - bar_w)
-                bar_x = SCREEN_W - bar_w;
+        if (k & BTN_RIGHT) {
+            bar_x += 5;
+            if (bar_x > SW - 80)
+                bar_x = SW - 80;
+        }
+        /* A cycles mapping mode 0/1/2 for live debug */
+        if (k & BTN_A) {
+            g_map_mode = (g_map_mode + 1) % 3;
+            delay(300000);
         }
 
-        delay(12000);
+        delay(10000);
     }
 
     return 0;
