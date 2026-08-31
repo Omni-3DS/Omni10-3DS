@@ -13,7 +13,7 @@ ELF      := arm9.elf
 BIN      := arm9.bin
 TARGET   := Omni10.firm
 
-CFLAGS  := -Wall -O2 -marm -fomit-frame-pointer -nostdlib -march=armv5te
+CFLAGS  := -Wall -O2 -marm -fomit-frame-pointer -nostdlib -march=armv5te -fno-builtin-memset
 ASFLAGS := -marm -march=armv5te
 LDFLAGS := -T $(LINKER) -nostdlib
 
