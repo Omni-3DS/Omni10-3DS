@@ -301,7 +301,7 @@ static void screen_about(void)
     draw_header();
     draw_text_centered(60, "OMNI10-3DS", 255, 255, 255);
     draw_text_centered(80, "CUSTOM FIRM PAYLOAD", 160, 200, 220);
-    draw_text_centered(110, "VERSION 0.1.0", 140, 140, 160);
+    draw_text_centered(110, "VERSION firm-test1", 140, 140, 160);
     draw_text_centered(140, ".O10 SCRIPTS  |  FTP", 120, 180, 200);
     draw_text_centered(170, "GITHUB.COM/OMNI-3DS", 100, 140, 180);
     draw_footer("B = BACK");
@@ -325,6 +325,7 @@ static void screen_menu(void)
         "SCRIPTS .O10  (SOON)",
         "FTP SERVER    (SOON)",
         "POWER OFF",
+        "MORE DETAILS SOON......",
     };
     const int n = 5;
     int sel = 0;
