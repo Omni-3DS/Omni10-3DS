@@ -2,89 +2,57 @@
 
 **Full Access. No Limits.**
 
-Omni10-3DS is a next-generation file browser, multi-tool and scripting environment for the Nintendo 3DS family.
+Custom Nintendo 3DS FIRM payload — boots from Luma3DS chainloader on Old 3DS and New 3DS / New 2DS XL.
 
-It aims to be significantly more powerful and modern than GodMode9 while keeping the same level of deep system access.
+## Status (v0.2.0)
 
-## Key Goals
+| Feature | State |
+|---------|--------|
+| Boot under Luma chainload | Working |
+| RGB888 framebuffer draw | Working |
+| 8x8 text + main menu | Working |
+| Old 3DS + New 2DS XL | Working |
+| START+SELECT power off | Working |
+| Menu reboot | Working |
+| System info (O3DS/N3DS detect) | Working |
+| File browser / .o10 / FTP | Planned |
 
-- Native high-level scripting language (`.o10`)
-- Powerful and clean Lua API
-- **Real FTP server + client** support
-- Modern, themeable UI
-- Custom splash screen & branding
-- Better safety features and logging
-- ARM9 + ARM11 cooperation for advanced features
+## Install
 
-## Project Structure
+1. Download `Omni10.firm` from [Actions artifacts](https://github.com/Omni-3DS/Omni10-3DS/actions) or Releases  
+2. Copy to `sd:/luma/payloads/Omni10.firm`  
+3. Hold **START** on boot → select **Omni10**
 
-```
-Omni10-3DS/
-├── .github/workflows/        # GitHub Actions CI
-├── assets/splash/            # Splash screen assets
-├── data/                     # Bundled assets (embedded at build)
-├── docs/
-│   ├── lua-api.md            # Lua API documentation
-│   ├── o10-scripting.md      # .o10 language documentation
-│   └── ROADMAP.md
-├── include/
-│   ├── common.h
-│   ├── ui.h
-│   ├── fs.h
-│   ├── net.h                 # FTP support
-│   └── o10.h
-├── source/
-│   ├── main.c
-│   ├── ui.c
-│   ├── fs.c
-│   ├── net.c
-│   └── o10.c
-├── scripts/examples/         # Example .o10 + .lua scripts
-├── Makefile
-├── CONTRIBUTING.md
-├── LICENSE                   # GPL-3.0
-└── README.md
-```
+## Controls
 
-## Scripting
+| Input | Action |
+|-------|--------|
+| D-Pad | Navigate menu |
+| **A** | Select |
+| **B** | Back |
+| **START + SELECT** | Power off |
 
-### Native `.o10` Scripts
-High-level, easy to read automation language.  
-→ [docs/o10-scripting.md](docs/o10-scripting.md)
-
-### Lua 5.4
-Full power with clean modules: `ui`, `fs`, `sys`, `net`, `nand`, `title`…  
-→ [docs/lua-api.md](docs/lua-api.md)
-
-Example scripts are in `scripts/examples/`.
-
-## Building
+## Build
 
 ```bash
+# needs devkitARM + firmtool
 make firm
 ```
 
-**Requirements:** devkitARM + firmtool + Python 3
+GitHub Actions builds on every push (`devkitpro/devkitarm` container + firmtool `-i`).
 
-GitHub Actions builds automatically on every push.
+```
+firmtool build Omni10.firm -i -n 0x08000040 -e 0 -D arm9.bin -A 0x08000040 -C NDMA
+```
 
-## Current Status
+## Roadmap
 
-| Component              | Status          |
-|------------------------|-----------------|
-| Project structure      | Done            |
-| Headers & stubs        | Done            |
-| UI / FS / Net / o10    | Stubs ready     |
-| Documentation          | Done            |
-| Example scripts        | Done            |
-| Splash folder          | Ready           |
-| Real FIRM code         | Next step       |
-| FTP implementation     | Planned         |
+1. SD file browser (FAT)
+2. Native `.o10` scripts
+3. Lua API
+4. Real FTP server
+5. Optional ARM11 section
 
 ## License
 
 GPL-3.0
-
-## Credits
-
-Inspired by the excellent work of **d0k3** and the entire 3DS homebrew community.
