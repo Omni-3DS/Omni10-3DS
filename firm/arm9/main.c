@@ -1,13 +1,14 @@
 /*
- * Omni10-3DS – ARM9 payload
- * RGB888 Luma FB, correct orientation, 8x8 font, main menu
+ * Omni10-3DS ARM9 payload v0.2
+ * Luma chainload | RGB888 FB | menu | power / reboot
  */
 
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
 
-#define REG_PAD_HID (*(volatile uint32_t *)0x10146000)
+#define REG_PAD_HID    (*(volatile uint32_t *)0x10146000)
+#define PDN_MPCORE_CFG (*(volatile uint8_t  *)0x10140FFC)
 
 #define SCREEN_W 400
 #define SCREEN_H 240
@@ -26,7 +27,6 @@
 #define BTN_UP     (1u << 6)
 #define BTN_DOWN   (1u << 7)
 
-/* 180° corrected mapping for upright text on both O3DS / N2DS */
 #define PIXEL_OFFSET(x, y) (((SCREEN_W - 1 - (x)) * SCREEN_H) + (y))
 
 #define I2C2_REGS_BASE 0x10144000
@@ -38,6 +38,13 @@
 #define I2C_DIRE_WRITE 0
 #define I2C_GET_ACK(r) (((r) >> 4) & 1u)
 #define MCU_DEV_ADDR   0x4A
+
+#define COL_BG_R 12
+#define COL_BG_G 12
+#define COL_BG_B 28
+#define COL_HDR_R 16
+#define COL_HDR_G 20
+#define COL_HDR_B 48
 
 typedef struct {
     volatile uint8_t  REG_I2C_DATA;
@@ -110,7 +117,14 @@ static bool i2c_write_mcu(uint8_t reg, uint8_t data)
 
 static void power_off(void)
 {
-    i2c_write_mcu(0x20, 1);
+    i2c_write_mcu(0x20, 1); /* bit0 power off */
+    while (1)
+        ;
+}
+
+static void reboot(void)
+{
+    i2c_write_mcu(0x20, 1u << 2); /* bit2 normal reboot */
     while (1)
         ;
 }
@@ -127,6 +141,7 @@ static void delay(int n)
         __asm__ volatile("nop");
 }
 
+/* 8x8 font ASCII 0x20-0x5F */
 static const uint8_t font8[64][8] = {
     {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},
     {0x18,0x3C,0x3C,0x18,0x18,0x00,0x18,0x00},
@@ -271,49 +286,106 @@ static uint32_t pad_raw(void)
 static uint32_t wait_key(void)
 {
     uint32_t prev = pad_raw();
-    delay(50000);
+    delay(40000);
     while (1) {
         uint32_t k = pad_raw();
         uint32_t pressed = k & ~prev;
         if (pressed)
             return pressed;
         prev = k;
-        delay(2000);
+        /* global hotkey */
+        if ((k & BTN_START) && (k & BTN_SELECT))
+            power_off();
+        delay(1500);
     }
+}
+
+static int is_new3ds(void)
+{
+    return (PDN_MPCORE_CFG & 2) != 0;
 }
 
 static void draw_header(void)
 {
-    fill_rect(0, 0, SCREEN_W, 28, 20, 20, 40);
+    fill_rect(0, 0, SCREEN_W, 28, COL_HDR_R, COL_HDR_G, COL_HDR_B);
     draw_text_centered(10, "OMNI10", 0, 220, 255);
-    fill_rect(0, 28, SCREEN_W, 2, 0, 160, 200);
+    fill_rect(0, 28, SCREEN_W, 2, 0, 180, 220);
 }
 
 static void draw_footer(const char *hint)
 {
-    fill_rect(0, SCREEN_H - 20, SCREEN_W, 20, 20, 20, 40);
-    draw_text_centered(SCREEN_H - 14, hint, 180, 180, 200);
+    fill_rect(0, SCREEN_H - 22, SCREEN_W, 22, COL_HDR_R, COL_HDR_G, COL_HDR_B);
+    draw_text_centered(SCREEN_H - 15, hint, 180, 190, 210);
 }
 
 static void screen_about(void)
 {
-    clear_top(12, 12, 24);
+    clear_top(COL_BG_R, COL_BG_G, COL_BG_B);
     draw_header();
-    draw_text_centered(60, "OMNI10-3DS", 255, 255, 255);
-    draw_text_centered(80, "CUSTOM FIRM PAYLOAD", 160, 200, 220);
-    draw_text_centered(110, "VERSION firm-test1", 140, 140, 160);
-    draw_text_centered(140, ".O10 SCRIPTS  |  FTP", 120, 180, 200);
-    draw_text_centered(170, "GITHUB.COM/OMNI-3DS", 100, 140, 180);
+    draw_text_centered(55, "OMNI10-3DS", 255, 255, 255);
+    draw_text_centered(75, "CUSTOM FIRM PAYLOAD", 140, 200, 230);
+    draw_text_centered(105, "VERSION 0.2.0", 160, 160, 180);
+    draw_text_centered(130, ".O10  |  LUA  |  FTP", 100, 180, 210);
+    draw_text_centered(155, "GITHUB.COM/OMNI-3DS", 90, 140, 180);
+    draw_text_centered(185, "FULL ACCESS. NO LIMITS.", 0, 200, 180);
     draw_footer("B = BACK");
     clear_bot();
     drain();
 
     while (1) {
         uint32_t k = wait_key();
-        if (k & (BTN_B | BTN_START))
+        if (k & BTN_B)
             return;
-        if ((k & BTN_START) && (k & BTN_SELECT))
-            power_off();
+    }
+}
+
+static void screen_sysinfo(void)
+{
+    clear_top(COL_BG_R, COL_BG_G, COL_BG_B);
+    draw_header();
+    draw_text_centered(45, "SYSTEM INFO", 200, 220, 255);
+
+    draw_text(48, 80, "CONSOLE:", 160, 160, 180);
+    draw_text(160, 80, is_new3ds() ? "NEW 3DS FAMILY" : "OLD 3DS FAMILY", 0, 255, 180);
+
+    draw_text(48, 100, "ENTRY:", 160, 160, 180);
+    draw_text(160, 100, "0x08000040", 200, 200, 220);
+
+    draw_text(48, 120, "FB FORMAT:", 160, 160, 180);
+    draw_text(160, 120, "RGB888", 200, 200, 220);
+
+    draw_text(48, 140, "PAYLOAD:", 160, 160, 180);
+    draw_text(160, 140, "ARM9 ONLY", 200, 200, 220);
+
+    draw_text(48, 160, "STATUS:", 160, 160, 180);
+    draw_text(160, 160, "RUNNING", 0, 255, 120);
+
+    draw_footer("B = BACK");
+    clear_bot();
+    drain();
+
+    while (1) {
+        uint32_t k = wait_key();
+        if (k & BTN_B)
+            return;
+    }
+}
+
+static void screen_placeholder(const char *title, const char *line1, const char *line2)
+{
+    clear_top(COL_BG_R, COL_BG_G, COL_BG_B);
+    draw_header();
+    draw_text_centered(70, title, 255, 220, 100);
+    draw_text_centered(110, line1, 180, 180, 200);
+    draw_text_centered(130, line2, 140, 140, 160);
+    draw_footer("B = BACK");
+    clear_bot();
+    drain();
+
+    while (1) {
+        uint32_t k = wait_key();
+        if (k & BTN_B)
+            return;
     }
 }
 
@@ -321,37 +393,36 @@ static void screen_menu(void)
 {
     static const char *items[] = {
         "ABOUT OMNI10",
+        "SYSTEM INFO",
         "FILE BROWSER  (SOON)",
         "SCRIPTS .O10  (SOON)",
         "FTP SERVER    (SOON)",
+        "REBOOT",
         "POWER OFF",
-        "MORE DETAILS SOON......",
     };
-    const int n = 5;
+    const int n = 7;
     int sel = 0;
 
     while (1) {
-        clear_top(12, 12, 24);
+        clear_top(COL_BG_R, COL_BG_G, COL_BG_B);
         draw_header();
-        draw_text_centered(40, "MAIN MENU", 200, 220, 255);
+        draw_text_centered(38, "MAIN MENU", 180, 210, 255);
 
         for (int i = 0; i < n; i++) {
-            int y = 70 + i * 22;
+            int y = 58 + i * 20;
             if (i == sel) {
-                fill_rect(40, y - 2, SCREEN_W - 80, 18, 0, 80, 120);
-                draw_text(56, y, items[i], 255, 255, 100);
+                fill_rect(36, y - 3, SCREEN_W - 72, 16, 0, 70, 110);
+                draw_text(52, y, items[i], 255, 255, 120);
             } else {
-                draw_text(56, y, items[i], 200, 200, 220);
+                draw_text(52, y, items[i], 190, 195, 210);
             }
         }
 
-        draw_footer("A SELECT  |  START+SELECT POWER");
+        draw_footer("A SELECT  |  START+SELECT OFF");
         clear_bot();
         drain();
 
         uint32_t k = wait_key();
-        if ((k & BTN_START) && (k & BTN_SELECT))
-            power_off();
         if (k & BTN_UP) {
             sel--;
             if (sel < 0)
@@ -363,10 +434,21 @@ static void screen_menu(void)
                 sel = 0;
         }
         if (k & BTN_A) {
-            if (sel == 0)
-                screen_about();
-            else if (sel == 4)
-                power_off();
+            switch (sel) {
+            case 0: screen_about(); break;
+            case 1: screen_sysinfo(); break;
+            case 2:
+                screen_placeholder("FILE BROWSER", "SD / NAND ACCESS", "COMING IN A LATER BUILD");
+                break;
+            case 3:
+                screen_placeholder("SCRIPTS .O10", "NATIVE SCRIPT ENGINE", "COMING IN A LATER BUILD");
+                break;
+            case 4:
+                screen_placeholder("FTP SERVER", "REAL FTP OVER WIFI", "COMING IN A LATER BUILD");
+                break;
+            case 5: reboot(); break;
+            case 6: power_off(); break;
+            }
         }
     }
 }
@@ -399,12 +481,14 @@ int main(int argc, char **argv)
         }
     }
 
-    clear_top(8, 8, 20);
-    draw_text_centered(100, "OMNI10", 0, 220, 255);
-    draw_text_centered(120, "BOOTING...", 120, 140, 180);
+    /* splash */
+    clear_top(8, 8, 24);
+    draw_text_centered(90, "OMNI10", 0, 220, 255);
+    draw_text_centered(112, "BOOTING...", 120, 150, 180);
+    draw_text_centered(200, "V0.2.0", 80, 100, 120);
     clear_bot();
     drain();
-    delay(800000);
+    delay(900000);
 
     screen_menu();
     return 0;
