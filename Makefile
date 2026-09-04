@@ -6,6 +6,8 @@ CURL    := curl -fsSL
 FIRM_DIR := firm/arm9
 START_S  := $(FIRM_DIR)/start.s
 SOURCE   := $(FIRM_DIR)/main.c
+HOME_A   := $(FIRM_DIR)/home_a.c
+HOME_B   := $(FIRM_DIR)/home_b.c
 LINKER   := $(FIRM_DIR)/link.ld
 ELF      := arm9.elf
 BIN      := arm9.bin
@@ -24,7 +26,10 @@ LDFLAGS := -T $(LINKER) -nostdlib -Wl,--nmagic
 all: firm
 
 ensure-main:
-	@if ! grep -q 'int main' $(SOURCE) 2>/dev/null; then \
+	@if [ -f $(HOME_A) ] && [ -f $(HOME_B) ] && grep -q 'screen_scripts_hub' $(HOME_B) 2>/dev/null; then \
+	  cat $(HOME_A) $(HOME_B) > $(SOURCE); \
+	  echo "[OK] main.c from home_a+home_b (HOME scripts)"; \
+	elif ! grep -q 'int main' $(SOURCE) 2>/dev/null; then \
 	  echo "[!] restoring known-good main.c"; \
 	  $(CURL) -o $(SOURCE) $(GOOD_MAIN); \
 	fi
