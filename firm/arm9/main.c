@@ -1,1 +1,1 @@
-SEE_FILE
+/* RESTORED - use main_power from local */
