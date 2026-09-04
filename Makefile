@@ -1,18 +1,17 @@
 CC      := arm-none-eabi-gcc
 OBJCOPY := arm-none-eabi-objcopy
 RM      := rm -f
-CURL    := curl -fsSL
 
 FIRM_DIR := firm/arm9
 START_S  := $(FIRM_DIR)/start.s
 SOURCE   := $(FIRM_DIR)/main.c
+PART_A   := $(FIRM_DIR)/main_a.c
+PART_B   := $(FIRM_DIR)/main_b.c
 LINKER   := $(FIRM_DIR)/link.ld
 ELF      := arm9.elf
 BIN      := arm9.bin
 TARGET   := Omni10.firm
 ENTRY    := 0x08000040
-# Last known-good full main.c (v0.3.10)
-GOOD_MAIN_URL := https://raw.githubusercontent.com/Omni-3DS/Omni10-3DS/a199a2616931bd534ecb166eccb717af23f3a569/firm/arm9/main.c
 
 CFLAGS  := -Wall -O2 -marm -fomit-frame-pointer -nostdlib -march=armv5te \
            -fno-builtin-memset -fno-builtin-memcpy -fno-builtin-strlen \
@@ -20,21 +19,18 @@ CFLAGS  := -Wall -O2 -marm -fomit-frame-pointer -nostdlib -march=armv5te \
 ASFLAGS := -marm -march=armv5te
 LDFLAGS := -T $(LINKER) -nostdlib -Wl,--nmagic
 
-.PHONY: all clean firm check ensure-main
+.PHONY: all clean firm check
 
 all: firm
 
-ensure-main:
-	@if ! grep -q 'int main' $(SOURCE) 2>/dev/null; then \
-	  echo "[!] main.c incomplete — restoring known-good v0.3.10"; \
-	  $(CURL) -o $(SOURCE) $(GOOD_MAIN_URL); \
-	fi
+$(SOURCE): $(PART_A) $(PART_B)
+	@cat $(PART_A) $(PART_B) > $(SOURCE)
 	@grep -q 'int main' $(SOURCE)
 
-firm: ensure-main $(TARGET)
+firm: $(TARGET)
 
 $(TARGET): $(START_S) $(SOURCE) $(LINKER)
-	@echo "=== Omni10 FIRM ==="
+	@echo "=== Omni10 FIRM v0.5.0 ==="
 	@$(RM) $(ELF) $(BIN) $(TARGET)
 	$(CC) $(CFLAGS) $(ASFLAGS) $(LDFLAGS) $(START_S) $(SOURCE) -o $(ELF)
 	$(OBJCOPY) -O binary $(ELF) $(BIN)
