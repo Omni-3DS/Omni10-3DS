@@ -1,5 +1,5 @@
 /*
- * Omni10-3DS ARM9 payload v0.3.4
+ * Omni10-3DS ARM9 payload v0.3.5
  * menu | lang EN/DE | .o10 runner | power/reboot confirm
  */
 
@@ -28,9 +28,9 @@
 #define BTN_UP     (1u << 6)
 #define BTN_DOWN   (1u << 7)
 
-/* Standard 3DS FB: column-major, y flipped */
-#define PIXEL_OFFSET(x, y) (((x) * SCREEN_H) + (SCREEN_H - 1 - (y)))
-#define PIXEL_OFFSET_BOT(x, y) (((x) * SCREEN_H) + (SCREEN_H - 1 - (y)))
+/* Standard 3DS FB: column-major, X and Y both flipped for upright landscape */
+#define PIXEL_OFFSET(x, y) (((SCREEN_W - 1 - (x)) * SCREEN_H) + (SCREEN_H - 1 - (y)))
+#define PIXEL_OFFSET_BOT(x, y) (((BOT_W - 1 - (x)) * SCREEN_H) + (SCREEN_H - 1 - (y)))
 
 #define I2C2_REGS_BASE 0x10144000
 /* Correct I2C_CNT bits per 3dbrew */
@@ -440,7 +440,7 @@ static void screen_about(void)
     draw_header();
     draw_text_centered(55, "OMNI10-3DS", 255, 255, 255);
     draw_text_centered(75, L("CUSTOM FIRM PAYLOAD", "EIGENES FIRM PAYLOAD"), 140, 200, 230);
-    draw_text_centered(105, "VERSION 0.3.4", 160, 160, 180);
+    draw_text_centered(105, "VERSION 0.3.5", 160, 160, 180);
     draw_text_centered(130, ".O10  |  LUA  |  FTP", 100, 180, 210);
     draw_text_centered(155, "GITHUB.COM/OMNI-3DS", 90, 140, 180);
     draw_text_centered(185, L("FULL ACCESS. NO LIMITS.", "VOLLER ZUGRIFF. KEINE LIMITS."), 0, 200, 180);
@@ -771,7 +771,7 @@ int main(int argc, char **argv)
     clear_bot(8, 8, 24);
     draw_text_centered(90, "OMNI10", 0, 220, 255);
     draw_text_centered(112, "BOOTING...", 120, 150, 180);
-    draw_text_centered(200, "V0.3.4", 80, 100, 120);
+    draw_text_centered(200, "V0.3.5", 80, 100, 120);
     draw_text_bot_centered(110, "FULL ACCESS", 0, 180, 200);
     drain();
     delay(700000);
