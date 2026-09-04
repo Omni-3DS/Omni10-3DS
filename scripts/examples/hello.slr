@@ -1,0 +1,6 @@
+# hello.slr - example Omni10 SLR script
+print "Hello from SLR"
+wait 500
+print "Omni10 rules"
+wait 500
+print "Done"
