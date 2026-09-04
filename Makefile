@@ -12,7 +12,8 @@ TARGET   := Omni10.firm
 ENTRY    := 0x08000040
 
 CFLAGS  := -Wall -O2 -marm -fomit-frame-pointer -nostdlib -march=armv5te \
-           -fno-builtin-memset -fno-builtin-memcpy
+           -fno-builtin-memset -fno-builtin-memcpy -fno-builtin-strlen \
+           -fno-builtin-strncmp -ffreestanding
 ASFLAGS := -marm -march=armv5te
 LDFLAGS := -T $(LINKER) -nostdlib -Wl,--nmagic
 
