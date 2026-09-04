@@ -5,8 +5,7 @@ RM      := rm -f
 FIRM_DIR := firm/arm9
 START_S  := $(FIRM_DIR)/start.s
 SOURCE   := $(FIRM_DIR)/main.c
-PART_A   := $(FIRM_DIR)/main_a.c
-PART_B   := $(FIRM_DIR)/main_b.c
+CHUNKS   := $(FIRM_DIR)/c0 $(FIRM_DIR)/c1 $(FIRM_DIR)/c2 $(FIRM_DIR)/c3 $(FIRM_DIR)/c4 $(FIRM_DIR)/c5 $(FIRM_DIR)/c6
 LINKER   := $(FIRM_DIR)/link.ld
 ELF      := arm9.elf
 BIN      := arm9.bin
@@ -23,9 +22,10 @@ LDFLAGS := -T $(LINKER) -nostdlib -Wl,--nmagic
 
 all: firm
 
-$(SOURCE): $(PART_A) $(PART_B)
-	@cat $(PART_A) $(PART_B) > $(SOURCE)
+$(SOURCE): $(CHUNKS)
+	@cat $(CHUNKS) > $(SOURCE)
 	@grep -q 'int main' $(SOURCE)
+	@grep -q 'slr_compile' $(SOURCE)
 
 firm: $(TARGET)
 
