@@ -1,5 +1,5 @@
 /*
- * Omni10-3DS ARM9 payload v0.3
+ * Omni10-3DS ARM9 payload v0.3.1
  * menu | lang EN/DE | .o10 runner | power/reboot confirm
  */
 
@@ -66,7 +66,6 @@ static volatile uint8_t *g_bot[2];
 static int g_n_top;
 static int g_n_bot;
 
-/* ---- language ---- */
 enum { LANG_EN = 0, LANG_DE = 1 };
 static int g_lang = LANG_EN;
 
@@ -75,6 +74,7 @@ static const char *L(const char *en, const char *de)
     return g_lang == LANG_DE ? de : en;
 }
 
+/* libc stubs required under -nostdlib / -O2 */
 void *memset(void *dest, int val, size_t count)
 {
     uint8_t *p = (uint8_t *)dest;
@@ -83,9 +83,9 @@ void *memset(void *dest, int val, size_t count)
     return dest;
 }
 
-static int strlen_s(const char *s)
+size_t strlen(const char *s)
 {
-    int n = 0;
+    size_t n = 0;
     while (s[n])
         n++;
     return n;
@@ -333,13 +333,13 @@ static void draw_text_bot(int x, int y, const char *s, uint8_t r, uint8_t g, uin
 
 static void draw_text_centered(int y, const char *s, uint8_t r, uint8_t g, uint8_t b)
 {
-    int w = strlen_s(s) * 8;
+    int w = (int)strlen(s) * 8;
     draw_text((SCREEN_W - w) / 2, y, s, r, g, b);
 }
 
 static void draw_text_bot_centered(int y, const char *s, uint8_t r, uint8_t g, uint8_t b)
 {
-    int w = strlen_s(s) * 8;
+    int w = (int)strlen(s) * 8;
     draw_text_bot((BOT_W - w) / 2, y, s, r, g, b);
 }
 
@@ -419,7 +419,7 @@ static void screen_about(void)
     draw_header();
     draw_text_centered(55, "OMNI10-3DS", 255, 255, 255);
     draw_text_centered(75, L("CUSTOM FIRM PAYLOAD", "EIGENES FIRM PAYLOAD"), 140, 200, 230);
-    draw_text_centered(105, "VERSION 0.3.0", 160, 160, 180);
+    draw_text_centered(105, "VERSION 0.3.1", 160, 160, 180);
     draw_text_centered(130, ".O10  |  LUA  |  FTP", 100, 180, 210);
     draw_text_centered(155, "GITHUB.COM/OMNI-3DS", 90, 140, 180);
     draw_text_centered(185, L("FULL ACCESS. NO LIMITS.", "VOLLER ZUGRIFF. KEINE LIMITS."), 0, 200, 180);
@@ -504,7 +504,6 @@ static void screen_settings(void)
     }
 }
 
-/* ---- .o10 demo scripts (built-in) ---- */
 static const char *demo_hello =
     "PRINT HELLO FROM O10\n"
     "WAIT\n"
@@ -733,7 +732,7 @@ int main(int argc, char **argv)
         if (fbs[0].top_left)
             g_top[g_n_top++] = (volatile uint8_t *)fbs[0].top_left;
         if (fbs[1].top_left)
-            g_top[g_n_top++] = (volatile uint8_t *)fbs[1].top_left;
+            g_top[g_n_top++] = (volatile uint16_t *)fbs[1].top_left;
         if (fbs[0].bottom)
             g_bot[g_n_bot++] = (volatile uint8_t *)fbs[0].bottom;
         if (fbs[1].bottom)
@@ -749,7 +748,7 @@ int main(int argc, char **argv)
     clear_bot(8, 8, 24);
     draw_text_centered(90, "OMNI10", 0, 220, 255);
     draw_text_centered(112, "BOOTING...", 120, 150, 180);
-    draw_text_centered(200, "V0.3.0", 80, 100, 120);
+    draw_text_centered(200, "V0.3.1", 80, 100, 120);
     draw_text_bot_centered(110, "FULL ACCESS", 0, 180, 200);
     drain();
     delay(700000);
