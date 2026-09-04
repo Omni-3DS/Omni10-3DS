@@ -1,5 +1,5 @@
 /*
- * Omni10-3DS ARM9 payload v0.3.6
+ * Omni10-3DS ARM9 payload v0.3.7
  * menu | lang EN/DE | .o10 runner | power/reboot confirm
  */
 
@@ -28,17 +28,16 @@
 #define BTN_UP     (1u << 6)
 #define BTN_DOWN   (1u << 7)
 
-/* Standard 3DS FB: column-major, Y flipped (landscape upright) */
-#define PIXEL_OFFSET(x, y) (((x) * SCREEN_H) + (SCREEN_H - 1 - (y)))
-#define PIXEL_OFFSET_BOT(x, y) (((x) * SCREEN_H) + (SCREEN_H - 1 - (y)))
+/* 3DS FB: column-major; X flipped (mem0=right), Y flipped */
+#define PIXEL_OFFSET(x, y) (((SCREEN_W - 1 - (x)) * SCREEN_H) + (SCREEN_H - 1 - (y)))
+#define PIXEL_OFFSET_BOT(x, y) (((BOT_W - 1 - (x)) * SCREEN_H) + (SCREEN_H - 1 - (y)))
 
 #define I2C2_REGS_BASE 0x10144000
-/* Correct I2C_CNT bits per 3dbrew */
 #define I2C_STOP       (1u << 0)
 #define I2C_START      (1u << 1)
 #define I2C_PAUSE      (1u << 2)
 #define I2C_ACK        (1u << 4)
-#define I2C_DIRE_READ  (1u << 5)  /* 0 = write */
+#define I2C_DIRE_READ  (1u << 5)
 #define I2C_IRQ_ENABLE (1u << 6)
 #define I2C_ENABLE     (1u << 7)
 #define I2C_GET_ACK(r) (((r) >> 4) & 1u)
@@ -80,34 +79,29 @@ static const char *L(const char *en, const char *de)
 void *memset(void *dest, int val, size_t count)
 {
     uint8_t *p = (uint8_t *)dest;
-    while (count--)
-        *p++ = (uint8_t)val;
+    while (count--) *p++ = (uint8_t)val;
     return dest;
 }
 
 size_t strlen(const char *s)
 {
     size_t n = 0;
-    while (s[n])
-        n++;
+    while (s[n]) n++;
     return n;
 }
 
 static int strncmp_s(const char *a, const char *b, int n)
 {
     for (int i = 0; i < n; i++) {
-        if (a[i] != b[i])
-            return (unsigned char)a[i] - (unsigned char)b[i];
-        if (!a[i])
-            return 0;
+        if (a[i] != b[i]) return (unsigned char)a[i] - (unsigned char)b[i];
+        if (!a[i]) return 0;
     }
     return 0;
 }
 
 static void i2c_wait(I2cRegs *regs)
 {
-    while (regs->REG_I2C_CNT & I2C_ENABLE)
-        ;
+    while (regs->REG_I2C_CNT & I2C_ENABLE) ;
 }
 
 static void i2c_init(void)
@@ -149,22 +143,18 @@ static void power_off(void)
 {
     i2c_init();
     i2c_write_mcu(0x22, 1u << 0);
-    for (volatile int i = 0; i < 300000; i++)
-        __asm__ volatile("nop");
+    for (volatile int i = 0; i < 300000; i++) __asm__ volatile("nop");
     i2c_write_mcu(0x20, 1u << 0);
-    while (1)
-        ;
+    while (1) ;
 }
 
 static void reboot(void)
 {
     i2c_init();
     i2c_write_mcu(0x22, 1u << 0);
-    for (volatile int i = 0; i < 300000; i++)
-        __asm__ volatile("nop");
+    for (volatile int i = 0; i < 300000; i++) __asm__ volatile("nop");
     i2c_write_mcu(0x20, 1u << 2);
-    while (1)
-        ;
+    while (1) ;
 }
 
 static void drain(void)
@@ -175,8 +165,7 @@ static void drain(void)
 
 static void delay(int n)
 {
-    for (volatile int i = 0; i < n; i++)
-        __asm__ volatile("nop");
+    for (volatile int i = 0; i < n; i++) __asm__ volatile("nop");
 }
 
 static const uint8_t font8[64][8] = {
@@ -248,27 +237,21 @@ static const uint8_t font8[64][8] = {
 
 static void put(int x, int y, uint8_t r, uint8_t g, uint8_t b)
 {
-    if (x < 0 || y < 0 || x >= SCREEN_W || y >= SCREEN_H)
-        return;
+    if (x < 0 || y < 0 || x >= SCREEN_W || y >= SCREEN_H) return;
     int idx = PIXEL_OFFSET(x, y) * 3;
     for (int i = 0; i < g_n_top; i++) {
         if (!g_top[i]) continue;
-        g_top[i][idx + 0] = b;
-        g_top[i][idx + 1] = g;
-        g_top[i][idx + 2] = r;
+        g_top[i][idx+0]=b; g_top[i][idx+1]=g; g_top[i][idx+2]=r;
     }
 }
 
 static void put_bot(int x, int y, uint8_t r, uint8_t g, uint8_t b)
 {
-    if (x < 0 || y < 0 || x >= BOT_W || y >= SCREEN_H)
-        return;
+    if (x < 0 || y < 0 || x >= BOT_W || y >= SCREEN_H) return;
     int idx = PIXEL_OFFSET_BOT(x, y) * 3;
     for (int i = 0; i < g_n_bot; i++) {
         if (!g_bot[i]) continue;
-        g_bot[i][idx + 0] = b;
-        g_bot[i][idx + 1] = g;
-        g_bot[i][idx + 2] = r;
+        g_bot[i][idx+0]=b; g_bot[i][idx+1]=g; g_bot[i][idx+2]=r;
     }
 }
 
@@ -276,19 +259,12 @@ static void fill_rect(int x, int y, int w, int h, uint8_t r, uint8_t g, uint8_t 
 {
     for (int j = 0; j < h; j++)
         for (int i = 0; i < w; i++)
-            put(x + i, y + j, r, g, b);
+            put(x+i, y+j, r, g, b);
 }
 
-static void clear_top(uint8_t r, uint8_t g, uint8_t b)
-{
-    fill_rect(0, 0, SCREEN_W, SCREEN_H, r, g, b);
-}
-
-static void clear_bot(uint8_t r, uint8_t g, uint8_t b)
-{
-    for (int y = 0; y < SCREEN_H; y++)
-        for (int x = 0; x < BOT_W; x++)
-            put_bot(x, y, r, g, b);
+static void clear_top(uint8_t r, uint8_t g, uint8_t b) { fill_rect(0,0,SCREEN_W,SCREEN_H,r,g,b); }
+static void clear_bot(uint8_t r, uint8_t g, uint8_t b) {
+    for (int y=0;y<SCREEN_H;y++) for (int x=0;x<BOT_W;x++) put_bot(x,y,r,g,b);
 }
 
 static void draw_char(int x, int y, char c, uint8_t r, uint8_t g, uint8_t b)
@@ -300,10 +276,9 @@ static void draw_char(int x, int y, char c, uint8_t r, uint8_t g, uint8_t b)
     const uint8_t *glyph = font8[idx];
     for (int row = 0; row < 8; row++) {
         uint8_t bits = glyph[row];
-        for (int col = 0; col < 8; col++) {
+        for (int col = 0; col < 8; col++)
             if (bits & (0x80 >> col))
                 put(x + col, y + row, r, g, b);
-        }
     }
 }
 
@@ -316,16 +291,15 @@ static void draw_char_bot(int x, int y, char c, uint8_t r, uint8_t g, uint8_t b)
     const uint8_t *glyph = font8[idx];
     for (int row = 0; row < 8; row++) {
         uint8_t bits = glyph[row];
-        for (int col = 0; col < 8; col++) {
+        for (int col = 0; col < 8; col++)
             if (bits & (0x80 >> col))
                 put_bot(x + col, y + row, r, g, b);
-        }
     }
 }
 
 static void draw_text(int x, int y, const char *s, uint8_t r, uint8_t g, uint8_t b)
 {
-    /* FB X inverted vs visual: draw glyphs in reverse so string reads LTR */
+    /* X-flip reverses order; draw chars reversed to compensate */
     int n = (int)strlen(s);
     for (int i = 0; i < n; i++)
         draw_char(x + i * 8, y, s[n - 1 - i], r, g, b);
@@ -350,10 +324,7 @@ static void draw_text_bot_centered(int y, const char *s, uint8_t r, uint8_t g, u
     draw_text_bot((BOT_W - w) / 2, y, s, r, g, b);
 }
 
-static uint32_t pad_raw(void)
-{
-    return ~REG_PAD_HID;
-}
+static uint32_t pad_raw(void) { return ~REG_PAD_HID; }
 
 static uint32_t wait_key(void)
 {
@@ -364,16 +335,12 @@ static uint32_t wait_key(void)
         uint32_t pressed = k & ~prev;
         if (pressed) return pressed;
         prev = k;
-        if ((k & BTN_START) && (k & BTN_SELECT))
-            power_off();
+        if ((k & BTN_START) && (k & BTN_SELECT)) power_off();
         delay(1200);
     }
 }
 
-static int is_new3ds(void)
-{
-    return (PDN_MPCORE_CFG & 2) != 0;
-}
+static int is_new3ds(void) { return (PDN_MPCORE_CFG & 2) != 0; }
 
 static void draw_header(void)
 {
@@ -420,7 +387,7 @@ static void screen_about(void)
     draw_header();
     draw_text_centered(55, "OMNI10-3DS", 255, 255, 255);
     draw_text_centered(75, L("CUSTOM FIRM PAYLOAD", "EIGENES FIRM PAYLOAD"), 140, 200, 230);
-    draw_text_centered(105, "VERSION 0.3.6", 160, 160, 180);
+    draw_text_centered(105, "VERSION 0.3.7", 160, 160, 180);
     draw_text_centered(130, ".O10  |  LUA  |  FTP", 100, 180, 210);
     draw_text_centered(155, "GITHUB.COM/OMNI-3DS", 90, 140, 180);
     draw_text_centered(185, L("FULL ACCESS. NO LIMITS.", "VOLLER ZUGRIFF. KEINE LIMITS."), 0, 200, 180);
@@ -464,35 +431,26 @@ static void screen_settings(void)
         for (int i = 0; i < 2; i++) {
             int y = 90 + i * 28;
             if (i == sel) {
-                fill_rect(40, y - 4, SCREEN_W - 80, 18, 0, 70, 110);
+                fill_rect(40, y-4, SCREEN_W-80, 18, 0, 70, 110);
                 draw_text(56, y, items[i], 255, 255, 120);
-            } else {
-                draw_text(56, y, items[i], 190, 195, 210);
-            }
+            } else draw_text(56, y, items[i], 190, 195, 210);
         }
         draw_footer(L("A SELECT  |  B BACK", "A WAEHLEN  |  B ZURUECK"));
         draw_bot_help(L("Change language", "Sprache aendern"), L("A toggle  B back", "A umschalten  B zurueck"));
         drain();
         uint32_t k = wait_key();
         if (k & BTN_B) return;
-        if (k & BTN_UP || k & BTN_DOWN) sel = 1 - sel;
-        if (k & BTN_A) {
-            if (sel == 0) g_lang = 1 - g_lang;
-            else return;
-        }
+        if ((k & BTN_UP) || (k & BTN_DOWN)) sel = 1 - sel;
+        if (k & BTN_A) { if (sel == 0) g_lang = 1 - g_lang; else return; }
     }
 }
 
-static const char *demo_hello =
-    "PRINT HELLO FROM O10\nWAIT\nPRINT OMNI10 RULES\nWAIT\nPRINT DONE\n";
-static const char *demo_info =
-    "PRINT SYSTEM CHECK\nWAIT\nPRINT PAYLOAD OK\nWAIT\nPRINT END\n";
+static const char *demo_hello = "PRINT HELLO FROM O10\nWAIT\nPRINT OMNI10 RULES\nWAIT\nPRINT DONE\n";
+static const char *demo_info = "PRINT SYSTEM CHECK\nWAIT\nPRINT PAYLOAD OK\nWAIT\nPRINT END\n";
 
 static void o10_run(const char *src)
 {
-    char line[48];
-    int li = 0;
-    int log_y = 60;
+    char line[48]; int li = 0, log_y = 60;
     clear_top(COL_BG_R, COL_BG_G, COL_BG_B);
     draw_header();
     draw_text_centered(40, L("O10 RUNNER", "O10 AUSFUEHRUNG"), 0, 220, 255);
@@ -504,32 +462,20 @@ static void o10_run(const char *src)
             line[li] = 0;
             if (li > 0) {
                 if (strncmp_s(line, "PRINT ", 6) == 0) {
-                    draw_text(40, log_y, line + 6, 200, 255, 200);
-                    log_y += 14;
-                    if (log_y > 200) log_y = 60;
-                    drain();
-                } else if (strncmp_s(line, "WAIT", 4) == 0) {
-                    delay(600000);
-                } else if (strncmp_s(line, "POWEROFF", 8) == 0) {
-                    power_off();
-                } else if (strncmp_s(line, "REBOOT", 6) == 0) {
-                    reboot();
-                }
+                    draw_text(40, log_y, line+6, 200, 255, 200);
+                    log_y += 14; if (log_y > 200) log_y = 60; drain();
+                } else if (strncmp_s(line, "WAIT", 4) == 0) delay(600000);
+                else if (strncmp_s(line, "POWEROFF", 8) == 0) power_off();
+                else if (strncmp_s(line, "REBOOT", 6) == 0) reboot();
             }
-            li = 0;
-            if (*src == 0) break;
-            src++;
-            continue;
+            li = 0; if (*src == 0) break; src++; continue;
         }
         if (li < 46) line[li++] = *src;
         src++;
     }
     draw_text_centered(210, L("A / B = BACK", "A / B = ZURUECK"), 160, 160, 180);
     drain();
-    while (1) {
-        uint32_t k = wait_key();
-        if (k & (BTN_A | BTN_B)) return;
-    }
+    while (1) { uint32_t k = wait_key(); if (k & (BTN_A|BTN_B)) return; }
 }
 
 static void screen_scripts(void)
@@ -539,16 +485,14 @@ static void screen_scripts(void)
         clear_top(COL_BG_R, COL_BG_G, COL_BG_B);
         draw_header();
         draw_text_centered(38, L("SCRIPTS .O10", "SKRIPTE .O10"), 200, 220, 255);
-        const char *items[] = { "HELLO.O10", "SYSCHECK.O10", L("BACK", "ZURUECK") };
+        const char *items[] = {"HELLO.O10", "SYSCHECK.O10", L("BACK", "ZURUECK")};
         const int n = 3;
         for (int i = 0; i < n; i++) {
             int y = 70 + i * 24;
             if (i == sel) {
-                fill_rect(40, y - 3, SCREEN_W - 80, 18, 0, 70, 110);
+                fill_rect(40, y-3, SCREEN_W-80, 18, 0, 70, 110);
                 draw_text(56, y, items[i], 255, 255, 120);
-            } else {
-                draw_text(56, y, items[i], 190, 195, 210);
-            }
+            } else draw_text(56, y, items[i], 190, 195, 210);
         }
         draw_text_centered(170, L("BUILT-IN DEMOS", "EINGEBAUTE DEMOS"), 120, 140, 160);
         draw_footer(L("A RUN  |  B BACK", "A START  |  B ZURUECK"));
@@ -556,7 +500,7 @@ static void screen_scripts(void)
         drain();
         uint32_t k = wait_key();
         if (k & BTN_B) return;
-        if (k & BTN_UP) { sel--; if (sel < 0) sel = n - 1; }
+        if (k & BTN_UP) { sel--; if (sel < 0) sel = n-1; }
         if (k & BTN_DOWN) { sel++; if (sel >= n) sel = 0; }
         if (k & BTN_A) {
             if (sel == 0) o10_run(demo_hello);
@@ -584,14 +528,11 @@ static void screen_menu(void)
     int sel = 0;
     while (1) {
         const char *items[] = {
-            L("ABOUT", "INFO"),
-            L("SYSTEM INFO", "SYSTEMINFO"),
-            L("SCRIPTS .O10", "SKRIPTE .O10"),
-            L("SETTINGS", "EINSTELLUNGEN"),
+            L("ABOUT", "INFO"), L("SYSTEM INFO", "SYSTEMINFO"),
+            L("SCRIPTS .O10", "SKRIPTE .O10"), L("SETTINGS", "EINSTELLUNGEN"),
             L("FILE BROWSER (SOON)", "DATEIBROWSER (BALD)"),
             L("FTP SERVER (SOON)", "FTP-SERVER (BALD)"),
-            L("REBOOT", "NEUSTART"),
-            L("POWER OFF", "AUSSCHALTEN"),
+            L("REBOOT", "NEUSTART"), L("POWER OFF", "AUSSCHALTEN"),
         };
         const int n = 8;
         clear_top(COL_BG_R, COL_BG_G, COL_BG_B);
@@ -600,18 +541,16 @@ static void screen_menu(void)
         for (int i = 0; i < n; i++) {
             int y = 52 + i * 18;
             if (i == sel) {
-                fill_rect(32, y - 2, SCREEN_W - 64, 15, 0, 70, 110);
+                fill_rect(32, y-2, SCREEN_W-64, 15, 0, 70, 110);
                 draw_text(48, y, items[i], 255, 255, 120);
-            } else {
-                draw_text(48, y, items[i], 190, 195, 210);
-            }
+            } else draw_text(48, y, items[i], 190, 195, 210);
         }
         draw_footer(L("A SELECT | START+SELECT OFF", "A WAEHLEN | START+SELECT AUS"));
         draw_bot_help(L("Navigate with D-Pad", "Mit Steuerkreuz navigieren"),
                       L("A select  B back", "A waehlen  B zurueck"));
         drain();
         uint32_t k = wait_key();
-        if (k & BTN_UP) { sel--; if (sel < 0) sel = n - 1; }
+        if (k & BTN_UP) { sel--; if (sel < 0) sel = n-1; }
         if (k & BTN_DOWN) { sel++; if (sel >= n) sel = 0; }
         if (k & BTN_A) {
             switch (sel) {
@@ -619,24 +558,10 @@ static void screen_menu(void)
             case 1: screen_sysinfo(); break;
             case 2: screen_scripts(); break;
             case 3: screen_settings(); break;
-            case 4:
-                screen_placeholder(L("FILE BROWSER", "DATEIBROWSER"),
-                                   L("SD / NAND ACCESS", "SD / NAND ZUGRIFF"),
-                                   L("COMING SOON", "KOMMT BALD"));
-                break;
-            case 5:
-                screen_placeholder(L("FTP SERVER", "FTP-SERVER"),
-                                   L("REAL FTP OVER WIFI", "ECHTES FTP UEBER WIFI"),
-                                   L("COMING SOON", "KOMMT BALD"));
-                break;
-            case 6:
-                if (confirm(L("REBOOT?", "NEUSTART?"), L("Restart the console", "Konsole neu starten")))
-                    reboot();
-                break;
-            case 7:
-                if (confirm(L("POWER OFF?", "AUSSCHALTEN?"), L("Turn console off", "Konsole ausschalten")))
-                    power_off();
-                break;
+            case 4: screen_placeholder(L("FILE BROWSER", "DATEIBROWSER"), L("SD / NAND ACCESS", "SD / NAND ZUGRIFF"), L("COMING SOON", "KOMMT BALD")); break;
+            case 5: screen_placeholder(L("FTP SERVER", "FTP-SERVER"), L("REAL FTP OVER WIFI", "ECHTES FTP UEBER WIFI"), L("COMING SOON", "KOMMT BALD")); break;
+            case 6: if (confirm(L("REBOOT?", "NEUSTART?"), L("Restart the console", "Konsole neu starten"))) reboot(); break;
+            case 7: if (confirm(L("POWER OFF?", "AUSSCHALTEN?"), L("Turn console off", "Konsole ausschalten"))) power_off(); break;
             }
         }
     }
@@ -645,30 +570,23 @@ static void screen_menu(void)
 int main(int argc, char **argv)
 {
     i2c_init();
-    g_top[0] = FB_TOP0;
-    g_top[1] = FB_TOP1;
-    g_bot[0] = FB_BOT0;
-    g_bot[1] = FB_BOT1;
-    g_n_top = 2;
-    g_n_bot = 2;
+    g_top[0]=FB_TOP0; g_top[1]=FB_TOP1; g_bot[0]=FB_BOT0; g_bot[1]=FB_BOT1;
+    g_n_top=2; g_n_bot=2;
     if (argc >= 2 && argv && argv[1]) {
         struct fb *fbs = (struct fb *)argv[1];
-        g_n_top = 0;
-        g_n_bot = 0;
+        g_n_top=0; g_n_bot=0;
         if (fbs[0].top_left) g_top[g_n_top++] = (volatile uint8_t *)fbs[0].top_left;
         if (fbs[1].top_left) g_top[g_n_top++] = (volatile uint8_t *)fbs[1].top_left;
         if (fbs[0].bottom) g_bot[g_n_bot++] = (volatile uint8_t *)fbs[0].bottom;
         if (fbs[1].bottom) g_bot[g_n_bot++] = (volatile uint8_t *)fbs[1].bottom;
-        if (g_n_top == 0) { g_top[0] = FB_TOP0; g_top[1] = FB_TOP1; g_n_top = 2; }
+        if (g_n_top==0) { g_top[0]=FB_TOP0; g_top[1]=FB_TOP1; g_n_top=2; }
     }
-    clear_top(8, 8, 24);
-    clear_bot(8, 8, 24);
+    clear_top(8,8,24); clear_bot(8,8,24);
     draw_text_centered(90, "OMNI10", 0, 220, 255);
     draw_text_centered(112, "BOOTING...", 120, 150, 180);
-    draw_text_centered(200, "V0.3.6", 80, 100, 120);
+    draw_text_centered(200, "V0.3.7", 80, 100, 120);
     draw_text_bot_centered(110, "FULL ACCESS", 0, 180, 200);
-    drain();
-    delay(700000);
+    drain(); delay(700000);
     screen_menu();
     return 0;
 }
