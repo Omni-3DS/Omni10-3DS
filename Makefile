@@ -5,8 +5,6 @@ RM      := rm -f
 FIRM_DIR := firm/arm9
 START_S  := $(FIRM_DIR)/start.s
 SOURCE   := $(FIRM_DIR)/main.c
-PART_A   := $(FIRM_DIR)/main_a.c
-PART_B   := $(FIRM_DIR)/main_b.c
 LINKER   := $(FIRM_DIR)/link.ld
 ELF      := arm9.elf
 BIN      := arm9.bin
@@ -23,8 +21,8 @@ LDFLAGS := -T $(LINKER) -nostdlib -Wl,--nmagic
 
 all: firm
 
-$(SOURCE): $(PART_A) $(PART_B)
-	@cat $(PART_A) $(PART_B) > $(SOURCE)
+$(SOURCE): $(FIRM_DIR)/m0.b64 $(FIRM_DIR)/m1.b64 $(FIRM_DIR)/m2.b64 $(FIRM_DIR)/m3.b64
+	@cat $(FIRM_DIR)/m0.b64 $(FIRM_DIR)/m1.b64 $(FIRM_DIR)/m2.b64 $(FIRM_DIR)/m3.b64 | base64 -d > $(SOURCE)
 
 firm: $(TARGET)
 
