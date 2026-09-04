@@ -21,13 +21,10 @@ LDFLAGS := -T $(LINKER) -nostdlib -Wl,--nmagic
 
 all: firm
 
-$(SOURCE): $(FIRM_DIR)/m0.b64 $(FIRM_DIR)/m1.b64 $(FIRM_DIR)/m2.b64 $(FIRM_DIR)/m3.b64
-	@cat $(FIRM_DIR)/m0.b64 $(FIRM_DIR)/m1.b64 $(FIRM_DIR)/m2.b64 $(FIRM_DIR)/m3.b64 | base64 -d > $(SOURCE)
-
 firm: $(TARGET)
 
 $(TARGET): $(START_S) $(SOURCE) $(LINKER)
-	@echo "=== Omni10 FIRM v0.4.0 ==="
+	@echo "=== Omni10 FIRM ==="
 	@$(RM) $(ELF) $(BIN) $(TARGET)
 	$(CC) $(CFLAGS) $(ASFLAGS) $(LDFLAGS) $(START_S) $(SOURCE) -o $(ELF)
 	$(OBJCOPY) -O binary $(ELF) $(BIN)
