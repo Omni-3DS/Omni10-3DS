@@ -1,40 +1,29 @@
 # Omni10-3DS Roadmap
 
-## Phase 0 – Project Setup ✓
-- [x] Repository created
-- [x] README + License + CONTRIBUTING
-- [x] GitHub Actions CI (complete workflow)
-- [x] Makefile
-- [x] Full project structure
-- [x] Splash design locked (GodMode9 pixel style)
-- [x] Lua API + .o10 documentation
-- [x] Architecture documentation
-- [x] Example scripts
-- [x] Core module stubs
-- [x] **Multi-language system (EN DE IT FR ES)**
-- [x] Language documentation
+## Done
 
-## Phase 1 – Core Foundation (next)
-- [ ] Real FIRM boot code (ARM9 + ARM11)
-- [ ] Framebuffer / drawing
-- [ ] File system access (FatFS + NAND)
-- [ ] Basic text UI + file browser
-- [ ] Input handling
+- [x] FIRM boot under Luma (Old + New)
+- [x] Framebuffer UI (top + bottom)
+- [x] Main menu + navigation
+- [x] EN/DE language
+- [x] System info
+- [x] MCU power off / reboot
+- [x] WiFi status via MCU (bar + test)
+- [x] Built-in text .o10 demos
+- [x] GitHub Actions CI
 
-## Phase 2 – Scripting
-- [ ] `.o10` parser & runtime
-- [ ] Lua 5.4 integration + bindings
-- [ ] Script menu + autorun support
+## Next
 
-## Phase 3 – Killer Features
-- [ ] Real FTP server (ARM11)
-- [ ] FTP client
-- [ ] Modern themable UI
-- [ ] Title / CIA tools
-- [ ] Advanced safety + logging
+- [ ] SDMMC + FAT
+- [ ] List `sdmc:/o10/slr/*.slr`
+- [ ] On-device SLR → opaque .o10 compile
+- [ ] On-device .o10 run from SD
+- [ ] File browser
+- [ ] Button / LED diagnostics in menu
 
-## Phase 4 – Polish & Release
-- [ ] Custom splash embedded
-- [ ] More languages (NL, PT, ...)
-- [ ] Full documentation
-- [ ] First public release
+## Later
+
+- [ ] Real FTP (network stack)
+- [ ] More languages
+- [ ] Lua binding
+- [ ] Optional Python port (separate runner, same SD paths)
