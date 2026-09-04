@@ -5,6 +5,8 @@ RM      := rm -f
 FIRM_DIR := firm/arm9
 START_S  := $(FIRM_DIR)/start.s
 SOURCE   := $(FIRM_DIR)/main.c
+PART_A   := $(FIRM_DIR)/main_a.c
+PART_B   := $(FIRM_DIR)/main_b.c
 LINKER   := $(FIRM_DIR)/link.ld
 ELF      := arm9.elf
 BIN      := arm9.bin
@@ -21,10 +23,13 @@ LDFLAGS := -T $(LINKER) -nostdlib -Wl,--nmagic
 
 all: firm
 
+$(SOURCE): $(PART_A) $(PART_B)
+	@cat $(PART_A) $(PART_B) > $(SOURCE)
+
 firm: $(TARGET)
 
 $(TARGET): $(START_S) $(SOURCE) $(LINKER)
-	@echo "=== Omni10 FIRM ==="
+	@echo "=== Omni10 FIRM v0.4.0 ==="
 	@$(RM) $(ELF) $(BIN) $(TARGET)
 	$(CC) $(CFLAGS) $(ASFLAGS) $(LDFLAGS) $(START_S) $(SOURCE) -o $(ELF)
 	$(OBJCOPY) -O binary $(ELF) $(BIN)
