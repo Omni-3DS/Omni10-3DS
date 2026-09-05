@@ -1,6 +1,6 @@
 /* version from Makefile -DOMNI_VERSION if set */
 #ifndef OMNI_VERSION
-#define OMNI_VERSION "0.8.6"
+#define OMNI_VERSION "0.8.7"
 #endif
 /* Omni10-3DS v0.8.2 - X-flip orient + left + net */
 #include <stdint.h>
@@ -313,5 +313,57 @@ static void screen_ftp(void){
     if(k&BTN_A){g_ftp_on=!g_ftp_on;}
   }
 }
-static void screen_menu(void){int sel=0;while(1){wifi_probe();battery_probe();g_ticks++;const char *items[]={L("ABOUT","INFO"),L("SYSTEM INFO","SYSTEMINFO"),L("HOME SCRIPTS","HOME SKRIPTE"),L("SETTINGS","EINSTELLUNGEN"),L("INTERNET / WIFI","INTERNET / WIFI"),L("BATTERY INFO","AKKU INFO"),L("BUTTON TEST","TASTEN TEST"),L("LED TEST","LED TEST"),L("FILE BROWSER","DATEIBROWSER"),L("FTP","FTP"),L("REBOOT","NEUSTART"),L("POWER OFF","AUSSCHALTEN")};const int n=12;clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();draw_text(left_x(L("MAIN MENU","HAUPTMENUE"),12),36,L("MAIN MENU","HAUPTMENUE"),180,210,255);for(int i=0;i<n;i++){int y=52+i*17;if(i==sel){fill_rect(4,y-2,SCREEN_W-8,15,0,70,110);draw_text(left_x(items[i],16),y,items[i],255,255,120);}else draw_text(left_x(items[i],16),y,items[i],190,195,210);}draw_footer(L("A SELECT | X SCRIPTS | START+SELECT OFF","A | X SKRIPTE | START+SELECT AUS"));draw_bot_help(L("D-Pad move  X = scripts","Steuerkreuz  X = Skripte"),L("A select  B back","A waehlen  B zurueck"));drain();uint32_t k=wait_key();if(k&BTN_X){screen_scripts_hub();continue;}if(k&BTN_UP){sel--;if(sel<0)sel=n-1;}if(k&BTN_DOWN){sel++;if(sel>=n)sel=0;}if(k&BTN_A){switch(sel){case 0:screen_about();break;case 1:screen_sysinfo();break;case 2:screen_scripts_hub();break;case 3:screen_settings();break;case 4:screen_internet();break;case 5:screen_battery();break;case 6:screen_buttons();break;case 7:screen_led();break;case 8:screen_filebrowser();break;case 9:screen_ftp();break;case 10:if(confirm(L("REBOOT?","NEUSTART?"),L("Restart the console","Konsole neu starten")))reboot();break;case 11:if(confirm(L("POWER OFF?","AUSSCHALTEN?"),L("Turn console off","Konsole ausschalten")))power_off();break;}}}}
+static void screen_menu(void){
+        int sel=0,scroll=0;
+        const int vis=8; /* visible rows between header and footer */
+        while(1){
+                wifi_probe();battery_probe();g_ticks++;
+                const char *items[]={
+                        L("ABOUT","INFO"),L("SYSTEM INFO","SYSTEMINFO"),L("HOME SCRIPTS","HOME SKRIPTE"),
+                        L("SETTINGS","EINSTELLUNGEN"),L("INTERNET / WIFI","INTERNET / WIFI"),L("BATTERY INFO","AKKU INFO"),
+                        L("BUTTON TEST","TASTEN TEST"),L("LED TEST","LED TEST"),L("FILE BROWSER","DATEIBROWSER"),
+                        L("FTP","FTP"),L("REBOOT","NEUSTART"),L("POWER OFF","AUSSCHALTEN")
+                };
+                const int n=12;
+                /* keep selection in view */
+                if(sel<scroll)scroll=sel;
+                if(sel>=scroll+vis)scroll=sel-vis+1;
+                if(scroll<0)scroll=0;
+                if(scroll>n-vis)scroll=n-vis;if(scroll<0)scroll=0;
+                clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();
+                draw_text(left_x(L("MAIN MENU","HAUPTMENUE"),12),34,L("MAIN MENU","HAUPTMENUE"),180,210,255);
+                /* scroll arrows */
+                if(scroll>0)draw_text(left_x("^ more",12),48,"^ more",120,160,200);
+                if(scroll+vis<n)draw_text(left_x("v more",12),48+vis*17+6,"v more",120,160,200);
+                for(int vi=0;vi<vis;vi++){
+                        int i=scroll+vi;if(i>=n)break;
+                        int y=52+vi*17;
+                        if(i==sel){fill_rect(4,y-2,SCREEN_W-8,15,0,70,110);draw_text(left_x(items[i],16),y,items[i],255,255,120);}
+                        else draw_text(left_x(items[i],16),y,items[i],190,195,210);
+                }
+                draw_footer(L("A SELECT | X SCRIPTS | START+SELECT OFF","A | X SKRIPTE | START+SELECT AUS"));
+                draw_bot_help(L("UP/DOWN scroll  X = scripts","HOCH/RUNTER scrollen  X = Skripte"),L("A select","A waehlen"));
+                drain();
+                uint32_t k=wait_key();
+                if(k&BTN_X){screen_scripts_hub();continue;}
+                if(k&BTN_UP){sel--;if(sel<0)sel=n-1;}
+                if(k&BTN_DOWN){sel++;if(sel>=n)sel=0;}
+                if(k&BTN_A){
+                        switch(sel){
+                        case 0:screen_about();break;
+                        case 1:screen_sysinfo();break;
+                        case 2:screen_scripts_hub();break;
+                        case 3:screen_settings();break;
+                        case 4:screen_internet();break;
+                        case 5:screen_battery();break;
+                        case 6:screen_buttons();break;
+                        case 7:screen_led();break;
+                        case 8:screen_filebrowser();break;
+                        case 9:screen_ftp();break;
+                        case 10:if(confirm(L("REBOOT?","NEUSTART?"),L("Restart the console","Konsole neu starten")))reboot();break;
+                        case 11:if(confirm(L("POWER OFF?","AUSSCHALTEN?"),L("Turn console off","Konsole ausschalten")))power_off();break;
+                        }
+                }
+        }
+}
 int main(int argc,char **argv){i2c_init();g_top[0]=FB_TOP0;g_top[1]=FB_TOP1;g_bot[0]=FB_BOT0;g_bot[1]=FB_BOT1;g_n_top=2;g_n_bot=2;if(argc>=2&&argv&&argv[1]){struct fb *fbs=(struct fb *)argv[1];g_n_top=0;g_n_bot=0;if(fbs[0].top_left)g_top[g_n_top++]=(volatile uint8_t*)fbs[0].top_left;if(fbs[1].top_left)g_top[g_n_top++]=(volatile uint8_t*)fbs[1].top_left;if(fbs[0].bottom)g_bot[g_n_bot++]=(volatile uint8_t*)fbs[0].bottom;if(fbs[1].bottom)g_bot[g_n_bot++]=(volatile uint8_t*)fbs[1].bottom;if(g_n_top==0){g_top[0]=FB_TOP0;g_top[1]=FB_TOP1;g_n_top=2;}}clear_top(8,8,24);clear_bot(8,8,24);draw_text_centered(90,"OMNI10",0,220,255);draw_text_centered(112,"BOOTING...",120,150,180);draw_text_centered(200,"V" OMNI_VERSION,80,100,120);draw_text_bot_centered(110,"FULL ACCESS",0,180,200);wifi_probe();battery_probe();drain();delay(700000);screen_menu();return 0;}
