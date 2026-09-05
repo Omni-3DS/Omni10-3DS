@@ -1,16 +1,16 @@
 /*
- * O10-Inst-Booter — Omni10 Installer / Updater / Booter
- * Flashcart path: warning + 5-color LED sequence for server confirm.
+ * O10-Inst-Booter — Installer / Updater / Booter
+ * R4/DSTT: backup to o10/r4|dstt/backup.bin BEFORE warning, full restore.
  */
 #include <3ds.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include "app.h"
 #include "omni.h"
 #include "ui.h"
 #include "led.h"
+#include "backup.h"
 
 static void copystr(char *dst, const char *src, size_t dstsz) {
 	if (!dstsz) return;
@@ -34,14 +34,15 @@ static void add_btn(App *app, const char *label, Action a, BtnStyle s) {
 
 static void fill_ip(App *app) {
 	copystr(app->localIp, "ip", sizeof(app->localIp));
-	/* Best-effort: SOC + gethostname not always set; leave placeholder */
 }
 
 static void shuffle_colors(App *app) {
 	u8 base[COLOR_SEQ_LEN] = {0, 1, 2, 3, 4};
-	for (int i = COLOR_SEQ_LEN - 1; i > 0; i--) {
-		int j = rand() % (i + 1);
-		u8 t = base[i]; base[i] = base[j]; base[j] = t;
+	int i, j;
+	u8 t;
+	for (i = COLOR_SEQ_LEN - 1; i > 0; i--) {
+		j = rand() % (i + 1);
+		t = base[i]; base[i] = base[j]; base[j] = t;
 	}
 	memcpy(app->colorSeq, base, COLOR_SEQ_LEN);
 	app->colorIndex = 0;
@@ -78,6 +79,13 @@ static void build_menu(App *app) {
 		add_btn(app, "Flashcart R4 / DSTT", ACT_FLASHCART, STYLE_DANGER);
 		add_btn(app, "Refresh file check", ACT_REFRESH, STYLE_NORMAL);
 		add_btn(app, "Exit", ACT_EXIT, STYLE_NORMAL);
+		add_btn(app, "Back", ACT_BACK, STYLE_NORMAL);
+		break;
+	case ST_FLASHCART_MENU:
+		add_btn(app, "R4: backup + warning", ACT_R4_WARN, STYLE_DANGER);
+		add_btn(app, "DSTT: backup + warning", ACT_DSTT_WARN, STYLE_DANGER);
+		add_btn(app, "Restore R4 backup", ACT_RESTORE_R4, STYLE_PRIMARY);
+		add_btn(app, "Restore DSTT backup", ACT_RESTORE_DSTT, STYLE_PRIMARY);
 		add_btn(app, "Back", ACT_BACK, STYLE_NORMAL);
 		break;
 	case ST_FLASHCART_WARN:
@@ -125,35 +133,57 @@ static void show_message(App *app, const char *title, const char *body, AppState
 	build_menu(app);
 }
 
-static void open_flashcart_warn(App *app) {
+/* Backup FIRST, then warning screen */
+static void open_flashcart_warn(App *app, BackupKind kind) {
+	char bmsg[160];
+	Result br;
 	fill_ip(app);
-	app->returnState = ST_OPTIONS;
+	app->backupKind = kind;
+	app->returnState = ST_FLASHCART_MENU;
+	br = backup_create(kind, bmsg, sizeof(bmsg));
+	if (R_FAILED(br)) {
+		show_message(app, "Backup failed", bmsg, ST_FLASHCART_MENU);
+		return;
+	}
 	app->state = ST_FLASHCART_WARN;
-	copystr(app->msgTitle, "WARNING — R4 / DSTT", sizeof(app->msgTitle));
+	snprintf(app->msgTitle, sizeof(app->msgTitle),
+	         kind == BACKUP_KIND_DSTT ? "WARNING — DSTT" : "WARNING — R4");
 	snprintf(app->msgBody, sizeof(app->msgBody),
-	         "Please get a magnet and activate sleep mode then enter in browser "
-	         "http://%s:1089  —  Press A to continue.",
-	         app->localIp[0] ? app->localIp : "ip");
-	copystr(app->statusLine, "Flashcart path — read carefully", sizeof(app->statusLine));
+	         "%s\nPlease get a magnet and activate sleep mode then enter in browser "
+	         "http://%s:1089 — Press A to continue.",
+	         bmsg, app->localIp[0] ? app->localIp : "ip");
+	snprintf(app->statusLine, sizeof(app->statusLine),
+	         "Backup saved: %s", backup_path(kind));
 	build_menu(app);
+}
+
+static void run_restore(App *app, BackupKind kind) {
+	char bmsg[160];
+	Result r = backup_restore(kind, bmsg, sizeof(bmsg));
+	do_scan(app);
+	if (R_FAILED(r))
+		show_message(app, "Restore failed", bmsg, ST_FLASHCART_MENU);
+	else
+		show_message(app, "Restore OK", bmsg, ST_FLASHCART_MENU);
 }
 
 static void start_color_seq(App *app) {
 	shuffle_colors(app);
 	app->state = ST_COLOR_SEQ;
-	app->returnState = ST_OPTIONS;
+	app->returnState = ST_FLASHCART_MENU;
 	copystr(app->msgTitle, "Color sequence", sizeof(app->msgTitle));
 	snprintf(app->msgBody, sizeof(app->msgBody),
-	         "Every 2s a color on NOTIFICATION LED. 5 colors. "
-	         "Order them on the server http://%s:1089 to confirm.",
+	         "Every 2s a color on NOTIFICATION LED (5 colors). "
+	         "Order them on server http://%s:1089 to confirm.",
 	         app->localIp[0] ? app->localIp : "ip");
 	led_color_index(app->colorSeq[0]);
 	build_menu(app);
 }
 
 static void tick_color_seq(App *app) {
+	u64 now;
 	if (app->state != ST_COLOR_SEQ) return;
-	u64 now = osGetTime();
+	now = osGetTime();
 	if (now - app->colorTick < 2000) return;
 	app->colorTick = now;
 	app->colorIndex = (app->colorIndex + 1) % COLOR_SEQ_LEN;
@@ -164,7 +194,7 @@ static void tick_color_seq(App *app) {
 }
 
 static void on_progress(const char *label, int idx, int cnt, u32 done, u32 total, void *ud) {
-	App *app = (App*)ud;
+	App *app = (App *)ud;
 	copystr(app->dlLabel, label, sizeof(app->dlLabel));
 	app->dlFileIndex = idx;
 	app->dlFileCount = cnt;
@@ -174,10 +204,11 @@ static void on_progress(const char *label, int idx, int cnt, u32 done, u32 total
 }
 
 static void run_install(App *app) {
+	Result r;
 	app->state = ST_DOWNLOADING;
 	copystr(app->dlLabel, "Installing...", sizeof(app->dlLabel));
 	uiRender(app);
-	Result r = omni_install_from_urls(on_progress, app);
+	r = omni_install_from_urls(on_progress, app);
 	do_scan(app);
 	if (R_FAILED(r))
 		show_message(app, "Install failed",
@@ -202,10 +233,8 @@ static void run_boot(App *app) {
 	        sizeof(app->msgBody));
 	while (aptMainLoop()) {
 		hidScanInput();
-		u32 down = hidKeysDown();
-		u32 held = hidKeysHeld();
-		if (down & KEY_B) { do_scan(app); return; }
-		if (held & KEY_START) {
+		if (hidKeysDown() & KEY_B) { do_scan(app); return; }
+		if (hidKeysHeld() & KEY_START) {
 			app->bootRebooting = true;
 			copystr(app->msgTitle, "Rebooting...", sizeof(app->msgTitle));
 			uiRender(app);
@@ -244,7 +273,22 @@ static void trigger(App *app, Action a) {
 		build_menu(app);
 		break;
 	case ACT_FLASHCART:
-		open_flashcart_warn(app);
+		app->returnState = ST_OPTIONS;
+		app->state = ST_FLASHCART_MENU;
+		copystr(app->statusLine, "R4 / DSTT backup + warn + restore", sizeof(app->statusLine));
+		build_menu(app);
+		break;
+	case ACT_R4_WARN:
+		open_flashcart_warn(app, BACKUP_KIND_R4);
+		break;
+	case ACT_DSTT_WARN:
+		open_flashcart_warn(app, BACKUP_KIND_DSTT);
+		break;
+	case ACT_RESTORE_R4:
+		run_restore(app, BACKUP_KIND_R4);
+		break;
+	case ACT_RESTORE_DSTT:
+		run_restore(app, BACKUP_KIND_DSTT);
 		break;
 	case ACT_WARN_CONTINUE:
 		start_color_seq(app);
@@ -286,7 +330,8 @@ static void handle_input(App *app, u32 kDown, const touchPosition *t) {
 		return;
 	}
 	if (kDown & KEY_B) {
-		if (app->state == ST_OPTIONS || app->state == ST_CONFIRM_UNINSTALL || app->state == ST_FLASHCART_WARN)
+		if (app->state == ST_OPTIONS || app->state == ST_CONFIRM_UNINSTALL ||
+		    app->state == ST_FLASHCART_WARN || app->state == ST_FLASHCART_MENU)
 			trigger(app, ACT_BACK);
 		else if (app->state == ST_MESSAGE)
 			trigger(app, ACT_MSG_OK);
@@ -301,29 +346,28 @@ static void handle_input(App *app, u32 kDown, const touchPosition *t) {
 }
 
 int main(int argc, char **argv) {
+	App app;
 	(void)argc; (void)argv;
 	osSetSpeedupEnable(true);
 	srand((unsigned)osGetTime());
 	romfsInit();
 	led_init();
 	uiInit();
-
-	App app;
 	memset(&app, 0, sizeof(app));
 	app.running = true;
 	do_scan(&app);
-
 	while (app.running && aptMainLoop()) {
 		hidScanInput();
-		u32 kDown = hidKeysDown();
-		touchPosition touch;
-		hidTouchRead(&touch);
-		tick_color_seq(&app);
-		handle_input(&app, kDown, &touch);
+		{
+			u32 kDown = hidKeysDown();
+			touchPosition touch;
+			hidTouchRead(&touch);
+			tick_color_seq(&app);
+			handle_input(&app, kDown, &touch);
+		}
 		if (!app.running) break;
 		uiRender(&app);
 	}
-
 	led_exit();
 	uiExit();
 	romfsExit();
