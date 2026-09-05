@@ -6,8 +6,8 @@ CURL    := curl -fsSL
 FIRM_DIR := firm/arm9
 START_S  := $(FIRM_DIR)/start.s
 SOURCE   := $(FIRM_DIR)/main.c
-HOME_A   := $(FIRM_DIR)/home_a.c
-HOME_B   := $(FIRM_DIR)/home_b.c
+B64_1    := scripts/firm_main_1.b64
+B64_2    := scripts/firm_main_2.b64
 LINKER   := $(FIRM_DIR)/link.ld
 ELF      := arm9.elf
 BIN      := arm9.bin
@@ -29,18 +29,18 @@ LDFLAGS := -T $(LINKER) -nostdlib -Wl,--nmagic
 all: firm
 
 ensure-main:
-	@if [ -f $(HOME_A) ] && [ -f $(HOME_B) ] && grep -q 'int main' $(HOME_B) 2>/dev/null; then \
-	  cat $(HOME_A) $(HOME_B) > $(SOURCE); \
-	  echo "[OK] main.c from home_a+home_b (v$(OMNI_VER))"; \
+	@if [ -f $(B64_1) ] && [ -f $(B64_2) ]; then \
+	  cat $(B64_1) $(B64_2) | tr -d '\n' | base64 -d > $(SOURCE); \
+	  echo "[OK] main.c from scripts/firm_main_*.b64 (v$(OMNI_VER))"; \
 	elif [ -f $(SOURCE) ] && grep -q 'int main' $(SOURCE) 2>/dev/null; then \
 	  echo "[OK] main.c present"; \
 	else \
 	  echo "[!] restoring base main.c"; \
 	  $(CURL) -o $(SOURCE) $(GOOD_MAIN); \
-	  sed -i "s/0\.3\.10/$(OMNI_VER)/g;s/V0\.3\.10/V$(OMNI_VER)/g" $(SOURCE) || true; \
 	fi
+	@sed -i "s/0\.3\.10/$(OMNI_VER)/g;s/V0\.3\.10/V$(OMNI_VER)/g;s/VERSION 0\.3\.10/VERSION $(OMNI_VER)/g" $(SOURCE) 2>/dev/null || true
 	@grep -q 'int main' $(SOURCE)
-	@echo "FIRM version.dat = $(OMNI_VER)"
+	@echo "FIRM version = $(OMNI_VER) (version.dat + -DOMNI_VERSION)"
 
 firm: ensure-main $(TARGET)
 
