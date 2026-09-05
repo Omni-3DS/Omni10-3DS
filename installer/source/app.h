@@ -3,6 +3,7 @@
 #include <stdbool.h>
 
 #define MAX_BTNS 8
+#define COLOR_SEQ_LEN 5
 
 typedef enum {
 	ST_NEED_INSTALL,
@@ -12,7 +13,9 @@ typedef enum {
 	ST_DOWNLOADING,
 	ST_BOOTING,
 	ST_MESSAGE,
-	ST_CONFIRM_UNINSTALL
+	ST_CONFIRM_UNINSTALL,
+	ST_FLASHCART_WARN,
+	ST_COLOR_SEQ
 } AppState;
 
 typedef enum {
@@ -25,7 +28,10 @@ typedef enum {
 	ACT_REFRESH,
 	ACT_EXIT,
 	ACT_BACK,
-	ACT_MSG_OK
+	ACT_MSG_OK,
+	ACT_FLASHCART,
+	ACT_WARN_CONTINUE,
+	ACT_COLOR_DONE
 } Action;
 
 typedef enum {
@@ -56,4 +62,9 @@ typedef struct {
 	bool bootRebooting;
 	char installedVer[32];
 	char remoteVer[32];
+	/* flashcart color sequence */
+	int colorIndex;
+	u8 colorSeq[COLOR_SEQ_LEN]; /* 0=R 1=G 2=B 3=Y 4=W */
+	u64 colorTick;
+	char localIp[24];
 } App;
