@@ -1,0 +1,33 @@
+name: Commit assets PNGs
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/gen_assets.py'
+      - '.github/workflows/commit-assets.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  generate-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate PNG / WAV
+        run: python3 scripts/gen_assets.py
+
+      - name: Commit assets/ for Universal-Updater
+        run: |
+          git config user.name "omni10-assets-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/
+          if git diff --staged --quiet; then
+            echo "No asset changes"
+          else
+            git commit -m "assets: PNG icon/banner/splash + banner.wav (Universal-Updater)"
+            git push
+          fi
