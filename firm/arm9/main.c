@@ -1,6 +1,6 @@
 /* version from Makefile -DOMNI_VERSION if set */
 #ifndef OMNI_VERSION
-#define OMNI_VERSION "0.8.7"
+#define OMNI_VERSION "0.8.6"
 #endif
 /* Omni10-3DS v0.8.2 - X-flip orient + left + net */
 #include <stdint.h>
