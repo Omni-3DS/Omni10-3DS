@@ -1,4 +1,4 @@
-name: Build Omni10 FIRM
+name: Build Omni10
 
 on:
   push:
@@ -8,29 +8,93 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: ver
+        run: |
+          V=$(tr -d ' \t\r\n' < version.dat)
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "Building version $V"
+
+  firm:
+    needs: version
     runs-on: ubuntu-latest
     container: devkitpro/devkitarm:latest
     env:
       DEVKITPRO: /opt/devkitpro
       DEVKITARM: /opt/devkitpro/devkitARM
       PATH: /opt/devkitpro/devkitARM/bin:/opt/devkitpro/tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install pip and firmtool
+      - uses: actions/checkout@v4
+      - name: Install firmtool
         run: |
           apt-get update
           apt-get install -y python3-pip
           python3 -m pip install --break-system-packages git+https://github.com/TuxSH/firmtool.git
-
       - name: Build Omni10.firm
         run: make firm
-
-      - name: Upload artifact
+      - name: Upload firm
         uses: actions/upload-artifact@v4
         with:
-          name: Omni10-firm
-          path: Omni10.firm
+          name: Omni10-firm-v${{ needs.version.outputs.version }}
+          path: |
+            Omni10.firm
+            version.dat
+
+  installer:
+    needs: version
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitarm:latest
+    env:
+      DEVKITPRO: /opt/devkitpro
+      DEVKITARM: /opt/devkitpro/devkitARM
+      PATH: /opt/devkitpro/devkitARM/bin:/opt/devkitpro/tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate assets
+        run: python3 scripts/gen_assets.py
+      - name: Build O10-Inst-Booter 3dsx
+        run: make -C installer all
+      - name: Upload 3dsx
+        uses: actions/upload-artifact@v4
+        with:
+          name: O10-Inst-Booter-3dsx-v${{ needs.version.outputs.version }}
+          path: |
+            installer/O10-Inst-Booter.3dsx
+            installer/O10-Inst-Booter.smdh
+            version.dat
+
+  # CIA needs bannertool+makerom; fails soft if missing
+  cia:
+    needs: [version, installer]
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitarm:latest
+    env:
+      DEVKITPRO: /opt/devkitpro
+      DEVKITARM: /opt/devkitpro/devkitARM
+      PATH: /opt/devkitpro/devkitARM/bin:/opt/devkitpro/tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate assets
+        run: python3 scripts/gen_assets.py
+      - name: Build 3dsx first
+        run: make -C installer all
+      - name: Try CIA (bannertool/makerom)
+        run: |
+          set +e
+          if command -v bannertool >/dev/null 2>&1 && command -v makerom >/dev/null 2>&1; then
+            make -f installer/Makefile.cia cia
+          else
+            echo "bannertool/makerom not in image — skip CIA"
+            exit 0
+          fi
+      - name: Upload cia if present
+        if: hashFiles('installer/O10-Inst-Booter.cia') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: O10-Inst-Booter-cia-v${{ needs.version.outputs.version }}
+          path: installer/O10-Inst-Booter.cia
