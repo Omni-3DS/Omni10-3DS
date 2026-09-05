@@ -29,11 +29,10 @@ all: firm
 ensure-main:
 	@if [ -f scripts/firm_main.zlib.b64 ]; then \
 	  python3 scripts/decode_firm_main.py; \
-	  echo "[OK] full-featured main.c decoded (v$(OMNI_VER))"; \
 	elif [ -f $(SOURCE) ] && grep -q 'screen_scripts_hub' $(SOURCE) 2>/dev/null; then \
-	  echo "[OK] full-featured main.c present"; \
+	  echo "[OK] full-featured main.c already in tree"; \
 	else \
-	  echo "[!] fallback restore"; \
+	  echo "[!] no full main yet — restoring base (version will be patched)"; \
 	  $(CURL) -o $(SOURCE) $(GOOD_MAIN); \
 	fi
 	@sed -i "s/0\.3\.10/$(OMNI_VER)/g;s/V0\.3\.10/V$(OMNI_VER)/g;s/VERSION 0\.3\.10/VERSION $(OMNI_VER)/g" $(SOURCE) 2>/dev/null || true
