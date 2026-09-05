@@ -3,8 +3,9 @@
 #include <stdbool.h>
 #include "fsutil.h"
 #include "ftp.h"
+#include "backup.h"
 
-#define MAX_BTNS 10
+#define MAX_BTNS 12
 #define COLOR_SEQ_LEN 5
 
 typedef enum {
@@ -16,6 +17,7 @@ typedef enum {
 	ST_BOOTING,
 	ST_MESSAGE,
 	ST_CONFIRM_UNINSTALL,
+	ST_FLASHCART_MENU,
 	ST_FLASHCART_WARN,
 	ST_COLOR_SEQ,
 	ST_FILE_BROWSER,
@@ -34,6 +36,10 @@ typedef enum {
 	ACT_BACK,
 	ACT_MSG_OK,
 	ACT_FLASHCART,
+	ACT_R4_WARN,
+	ACT_DSTT_WARN,
+	ACT_RESTORE_R4,
+	ACT_RESTORE_DSTT,
 	ACT_WARN_CONTINUE,
 	ACT_COLOR_DONE,
 	ACT_FILE_BROWSER,
@@ -76,4 +82,5 @@ typedef struct {
 	FsBrowser browser;
 	FtpServer ftp;
 	bool soc_ok;
+	BackupKind backupKind;
 } App;
