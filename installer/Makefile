@@ -13,7 +13,7 @@ SOURCES     := source
 INCLUDES    := source
 
 APP_TITLE       := O10 Inst Booter
-APP_DESCRIPTION := Omni10 Installer Updater Booter
+APP_DESCRIPTION := Install Update Boot Omni10
 APP_AUTHOR      := Omni-3DS
 
 ARCH    := -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
@@ -21,7 +21,7 @@ CFLAGS  := -g -Wall -O2 -mword-relocations -ffunction-sections $(ARCH)
 CFLAGS  += $(INCLUDE) -D__3DS__
 ASFLAGS := -g $(ARCH)
 LDFLAGS := -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
-LIBS    := -lcitro2d -lcitro3d -lctru -lm
+LIBS    := -lcitro2d -lcitro3d -lcurl -lmbedtls -lmbedx509 -lmbedcrypto -lz -lctru -lm
 LIBDIRS := $(CTRULIB) $(PORTLIBS)
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
@@ -30,7 +30,8 @@ export OUTPUT := $(CURDIR)/$(TARGET)
 export TOPDIR := $(CURDIR)
 export VPATH  := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
 export DEPSDIR := $(CURDIR)/$(BUILD)
-CFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+# Only core sources (install/boot/update)
+CFILES := main.c ui.c omni.c http.c
 export LD := $(CC)
 export OFILES_SOURCES := $(CFILES:.c=.o)
 export OFILES := $(OFILES_SOURCES)
