@@ -315,24 +315,17 @@ static void screen_ftp(void){
 }
 static void screen_menu(void){
         int sel=0,scroll=0;
-        const int vis=8; /* visible rows between header and footer */
+        const int vis=8;
         while(1){
                 wifi_probe();battery_probe();g_ticks++;
-                const char *items[]={
-                        L("ABOUT","INFO"),L("SYSTEM INFO","SYSTEMINFO"),L("HOME SCRIPTS","HOME SKRIPTE"),
-                        L("SETTINGS","EINSTELLUNGEN"),L("INTERNET / WIFI","INTERNET / WIFI"),L("BATTERY INFO","AKKU INFO"),
-                        L("BUTTON TEST","TASTEN TEST"),L("LED TEST","LED TEST"),L("FILE BROWSER","DATEIBROWSER"),
-                        L("FTP","FTP"),L("REBOOT","NEUSTART"),L("POWER OFF","AUSSCHALTEN")
-                };
+                const char *items[]={L("ABOUT","INFO"),L("SYSTEM INFO","SYSTEMINFO"),L("HOME SCRIPTS","HOME SKRIPTE"),L("SETTINGS","EINSTELLUNGEN"),L("INTERNET / WIFI","INTERNET / WIFI"),L("BATTERY INFO","AKKU INFO"),L("BUTTON TEST","TASTEN TEST"),L("LED TEST","LED TEST"),L("FILE BROWSER","DATEIBROWSER"),L("FTP","FTP"),L("REBOOT","NEUSTART"),L("POWER OFF","AUSSCHALTEN")};
                 const int n=12;
-                /* keep selection in view */
                 if(sel<scroll)scroll=sel;
                 if(sel>=scroll+vis)scroll=sel-vis+1;
                 if(scroll<0)scroll=0;
-                if(scroll>n-vis)scroll=n-vis;if(scroll<0)scroll=0;
+                if(scroll>n-vis)scroll=(n>vis)?(n-vis):0;
                 clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();
                 draw_text(left_x(L("MAIN MENU","HAUPTMENUE"),12),34,L("MAIN MENU","HAUPTMENUE"),180,210,255);
-                /* scroll arrows */
                 if(scroll>0)draw_text(left_x("^ more",12),48,"^ more",120,160,200);
                 if(scroll+vis<n)draw_text(left_x("v more",12),48+vis*17+6,"v more",120,160,200);
                 for(int vi=0;vi<vis;vi++){
@@ -366,4 +359,5 @@ static void screen_menu(void){
                 }
         }
 }
+
 int main(int argc,char **argv){i2c_init();g_top[0]=FB_TOP0;g_top[1]=FB_TOP1;g_bot[0]=FB_BOT0;g_bot[1]=FB_BOT1;g_n_top=2;g_n_bot=2;if(argc>=2&&argv&&argv[1]){struct fb *fbs=(struct fb *)argv[1];g_n_top=0;g_n_bot=0;if(fbs[0].top_left)g_top[g_n_top++]=(volatile uint8_t*)fbs[0].top_left;if(fbs[1].top_left)g_top[g_n_top++]=(volatile uint8_t*)fbs[1].top_left;if(fbs[0].bottom)g_bot[g_n_bot++]=(volatile uint8_t*)fbs[0].bottom;if(fbs[1].bottom)g_bot[g_n_bot++]=(volatile uint8_t*)fbs[1].bottom;if(g_n_top==0){g_top[0]=FB_TOP0;g_top[1]=FB_TOP1;g_n_top=2;}}clear_top(8,8,24);clear_bot(8,8,24);draw_text_centered(90,"OMNI10",0,220,255);draw_text_centered(112,"BOOTING...",120,150,180);draw_text_centered(200,"V" OMNI_VERSION,80,100,120);draw_text_bot_centered(110,"FULL ACCESS",0,180,200);wifi_probe();battery_probe();drain();delay(700000);screen_menu();return 0;}
