@@ -1,7 +1,6 @@
 CC      := arm-none-eabi-gcc
 OBJCOPY := arm-none-eabi-objcopy
 RM      := rm -f
-CURL    := curl -fsSL
 
 FIRM_DIR := firm/arm9
 START_S  := $(FIRM_DIR)/start.s
@@ -25,20 +24,19 @@ LDFLAGS := -T $(LINKER) -nostdlib -Wl,--nmagic
 
 all: firm
 
-# NEVER use old 0.3.10 fallback when compressed full source exists
 ensure-main:
 	@if [ ! -f scripts/firm_main_0.zlib.b64 ] || [ ! -f scripts/firm_main_3.zlib.b64 ]; then \
-	  echo "ERROR: missing scripts/firm_main_*.zlib.b64 full source"; exit 1; \
+	  echo "ERROR: missing scripts/firm_main_*.zlib.b64"; exit 1; \
 	fi
 	python3 scripts/decode_firm_main.py
 	@grep -q 'screen_scripts_hub' $(SOURCE)
-	@grep -q 'FULL FEATURES' $(SOURCE)
-	@echo "FIRM version = $(OMNI_VER) (FULL FEATURES)"
+	@grep -q 'HOME SCRIPTS' $(SOURCE)
+	@echo "FIRM version = $(OMNI_VER)"
 
 firm: ensure-main $(TARGET)
 
 $(TARGET): $(START_S) $(SOURCE) $(LINKER) version.dat
-	@echo "=== Omni10 FIRM v$(OMNI_VER) FULL FEATURES ==="
+	@echo "=== Omni10 FIRM v$(OMNI_VER) ==="
 	@$(RM) $(ELF) $(BIN) $(TARGET)
 	$(CC) $(CFLAGS) $(ASFLAGS) $(LDFLAGS) $(START_S) $(SOURCE) -o $(ELF)
 	$(OBJCOPY) -O binary $(ELF) $(BIN)
