@@ -1,14 +1,16 @@
 /*
  * O10-Inst-Booter — Omni10 Installer / Updater / Booter
- * Boot pattern inspired by TeamAuroraOS/AuroraOS-Installer.
+ * Flashcart path: warning + 5-color LED sequence for server confirm.
  */
 #include <3ds.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "app.h"
 #include "omni.h"
 #include "ui.h"
+#include "led.h"
 
 static void copystr(char *dst, const char *src, size_t dstsz) {
 	if (!dstsz) return;
@@ -30,6 +32,33 @@ static void add_btn(App *app, const char *label, Action a, BtnStyle s) {
 	b->style = s;
 }
 
+static void fill_ip(App *app) {
+	copystr(app->localIp, "ip", sizeof(app->localIp));
+	/* Best-effort: SOC + gethostname not always set; leave placeholder */
+}
+
+static void shuffle_colors(App *app) {
+	u8 base[COLOR_SEQ_LEN] = {0, 1, 2, 3, 4};
+	for (int i = COLOR_SEQ_LEN - 1; i > 0; i--) {
+		int j = rand() % (i + 1);
+		u8 t = base[i]; base[i] = base[j]; base[j] = t;
+	}
+	memcpy(app->colorSeq, base, COLOR_SEQ_LEN);
+	app->colorIndex = 0;
+	app->colorTick = osGetTime();
+}
+
+static const char *color_name(int idx) {
+	switch (idx) {
+	case 0: return "RED";
+	case 1: return "GREEN";
+	case 2: return "BLUE";
+	case 3: return "YELLOW";
+	case 4: return "WHITE";
+	default: return "?";
+	}
+}
+
 static void build_menu(App *app) {
 	app->nbtns = 0;
 	app->sel = 0;
@@ -46,9 +75,17 @@ static void build_menu(App *app) {
 		add_btn(app, "Other options...", ACT_OPTIONS, STYLE_NORMAL);
 		break;
 	case ST_OPTIONS:
+		add_btn(app, "Flashcart R4 / DSTT", ACT_FLASHCART, STYLE_DANGER);
 		add_btn(app, "Refresh file check", ACT_REFRESH, STYLE_NORMAL);
 		add_btn(app, "Exit", ACT_EXIT, STYLE_NORMAL);
 		add_btn(app, "Back", ACT_BACK, STYLE_NORMAL);
+		break;
+	case ST_FLASHCART_WARN:
+		add_btn(app, "A = Continue", ACT_WARN_CONTINUE, STYLE_PRIMARY);
+		add_btn(app, "Cancel", ACT_BACK, STYLE_NORMAL);
+		break;
+	case ST_COLOR_SEQ:
+		add_btn(app, "Done / Cancel", ACT_COLOR_DONE, STYLE_NORMAL);
 		break;
 	case ST_CONFIRM_UNINSTALL:
 		add_btn(app, "Yes, uninstall", ACT_UNINSTALL_YES, STYLE_DANGER);
@@ -88,6 +125,44 @@ static void show_message(App *app, const char *title, const char *body, AppState
 	build_menu(app);
 }
 
+static void open_flashcart_warn(App *app) {
+	fill_ip(app);
+	app->returnState = ST_OPTIONS;
+	app->state = ST_FLASHCART_WARN;
+	copystr(app->msgTitle, "WARNING — R4 / DSTT", sizeof(app->msgTitle));
+	snprintf(app->msgBody, sizeof(app->msgBody),
+	         "Please get a magnet and activate sleep mode then enter in browser "
+	         "http://%s:1089  —  Press A to continue.",
+	         app->localIp[0] ? app->localIp : "ip");
+	copystr(app->statusLine, "Flashcart path — read carefully", sizeof(app->statusLine));
+	build_menu(app);
+}
+
+static void start_color_seq(App *app) {
+	shuffle_colors(app);
+	app->state = ST_COLOR_SEQ;
+	app->returnState = ST_OPTIONS;
+	copystr(app->msgTitle, "Color sequence", sizeof(app->msgTitle));
+	snprintf(app->msgBody, sizeof(app->msgBody),
+	         "Every 2s a color on NOTIFICATION LED. 5 colors. "
+	         "Order them on the server http://%s:1089 to confirm.",
+	         app->localIp[0] ? app->localIp : "ip");
+	led_color_index(app->colorSeq[0]);
+	build_menu(app);
+}
+
+static void tick_color_seq(App *app) {
+	if (app->state != ST_COLOR_SEQ) return;
+	u64 now = osGetTime();
+	if (now - app->colorTick < 2000) return;
+	app->colorTick = now;
+	app->colorIndex = (app->colorIndex + 1) % COLOR_SEQ_LEN;
+	led_color_index(app->colorSeq[app->colorIndex]);
+	snprintf(app->statusLine, sizeof(app->statusLine),
+	         "LED %d/5: %s  (match order on server)",
+	         app->colorIndex + 1, color_name(app->colorSeq[app->colorIndex]));
+}
+
 static void on_progress(const char *label, int idx, int cnt, u32 done, u32 total, void *ud) {
 	App *app = (App*)ud;
 	copystr(app->dlLabel, label, sizeof(app->dlLabel));
@@ -106,7 +181,7 @@ static void run_install(App *app) {
 	do_scan(app);
 	if (R_FAILED(r))
 		show_message(app, "Install failed",
-		             "Put Omni10.firm on SD root or sdmc:/omni10/, then retry. Luma3DS required.",
+		             "Put Omni10.firm on SD root or sdmc:/omni10/, then retry.",
 		             app->state);
 	else
 		show_message(app, "Omni10 installed",
@@ -121,12 +196,10 @@ static void run_boot(App *app) {
 		return;
 	}
 	app->state = ST_BOOTING;
-	app->bootRebooting = false;
 	copystr(app->msgTitle, "Boot Omni10", sizeof(app->msgTitle));
 	copystr(app->msgBody,
-	        "Hold START and keep holding. Console reboots into Luma chainloader — keep START held, then choose Omni10. (B = cancel)",
+	        "Hold START and keep holding. Reboots into Luma chainloader — choose Omni10. (B = cancel)",
 	        sizeof(app->msgBody));
-
 	while (aptMainLoop()) {
 		hidScanInput();
 		u32 down = hidKeysDown();
@@ -135,16 +208,9 @@ static void run_boot(App *app) {
 		if (held & KEY_START) {
 			app->bootRebooting = true;
 			copystr(app->msgTitle, "Rebooting...", sizeof(app->msgTitle));
-			copystr(app->msgBody,
-			        "Keep holding START until Luma menu appears, then select Omni10.",
-			        sizeof(app->msgBody));
 			uiRender(app);
-			Result r = omni_boot_reboot();
-			if (R_FAILED(r)) {
-				nsInit();
-				NS_RebootSystem();
-				nsExit();
-			}
+			omni_boot_reboot();
+			nsInit(); NS_RebootSystem(); nsExit();
 			while (aptMainLoop()) uiRender(app);
 			return;
 		}
@@ -177,12 +243,24 @@ static void trigger(App *app, Action a) {
 		copystr(app->statusLine, "Other options", sizeof(app->statusLine));
 		build_menu(app);
 		break;
+	case ACT_FLASHCART:
+		open_flashcart_warn(app);
+		break;
+	case ACT_WARN_CONTINUE:
+		start_color_seq(app);
+		break;
+	case ACT_COLOR_DONE:
+		led_off();
+		app->state = app->returnState;
+		build_menu(app);
+		break;
 	case ACT_REFRESH:
 		do_scan(app); break;
 	case ACT_EXIT:
 		app->running = false; break;
 	case ACT_BACK:
 	case ACT_MSG_OK:
+		led_off();
 		app->state = app->returnState;
 		build_menu(app);
 		break;
@@ -192,17 +270,23 @@ static void trigger(App *app, Action a) {
 
 static void handle_input(App *app, u32 kDown, const touchPosition *t) {
 	if (app->state == ST_DOWNLOADING || app->state == ST_BOOTING) return;
+	if (app->state == ST_COLOR_SEQ) {
+		if (kDown & (KEY_B | KEY_A | KEY_START))
+			trigger(app, ACT_COLOR_DONE);
+		return;
+	}
 	if (kDown & KEY_TOUCH) {
 		int i = uiButtonAtTouch(app, t);
 		if (i >= 0) { app->sel = i; trigger(app, app->btns[i].action); }
 		return;
 	}
 	if (kDown & KEY_A) {
+		if (app->state == ST_FLASHCART_WARN) { trigger(app, ACT_WARN_CONTINUE); return; }
 		if (app->nbtns > 0) trigger(app, app->btns[app->sel].action);
 		return;
 	}
 	if (kDown & KEY_B) {
-		if (app->state == ST_OPTIONS || app->state == ST_CONFIRM_UNINSTALL)
+		if (app->state == ST_OPTIONS || app->state == ST_CONFIRM_UNINSTALL || app->state == ST_FLASHCART_WARN)
 			trigger(app, ACT_BACK);
 		else if (app->state == ST_MESSAGE)
 			trigger(app, ACT_MSG_OK);
@@ -219,7 +303,9 @@ static void handle_input(App *app, u32 kDown, const touchPosition *t) {
 int main(int argc, char **argv) {
 	(void)argc; (void)argv;
 	osSetSpeedupEnable(true);
+	srand((unsigned)osGetTime());
 	romfsInit();
+	led_init();
 	uiInit();
 
 	App app;
@@ -232,11 +318,13 @@ int main(int argc, char **argv) {
 		u32 kDown = hidKeysDown();
 		touchPosition touch;
 		hidTouchRead(&touch);
+		tick_color_seq(&app);
 		handle_input(&app, kDown, &touch);
 		if (!app.running) break;
 		uiRender(&app);
 	}
 
+	led_exit();
 	uiExit();
 	romfsExit();
 	return 0;

@@ -31,6 +31,17 @@ static void draw_text(float x, float y, float scale, u32 color, const char *s) {
 	C2D_DrawText(&t, C2D_WithColor, x, y, 0.5f, scale, scale, color);
 }
 
+static u32 seq_color_u32(int idx) {
+	switch (idx) {
+	case 0: return C2D_Color32(255, 40, 40, 255);
+	case 1: return C2D_Color32(40, 220, 80, 255);
+	case 2: return C2D_Color32(40, 100, 255, 255);
+	case 3: return C2D_Color32(255, 220, 40, 255);
+	case 4: return C2D_Color32(240, 240, 240, 255);
+	default: return C2D_Color32(80, 80, 80, 255);
+	}
+}
+
 void uiRender(App *app) {
 	C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 	C2D_TargetClear(top, C2D_Color32(12, 16, 36, 255));
@@ -38,12 +49,17 @@ void uiRender(App *app) {
 	draw_text(12, 12, 0.7f, C2D_Color32(0, 220, 255, 255), "O10-Inst-Booter");
 	draw_text(12, 40, 0.5f, C2D_Color32(200, 210, 230, 255), "Omni10 Installer / Updater / Booter");
 	draw_text(12, 70, 0.5f, C2D_Color32(180, 190, 210, 255), app->statusLine);
-	if (app->installedVer[0]) {
-		char line[64];
-		snprintf(line, sizeof(line), "Installed: v%s", app->installedVer);
-		draw_text(12, 95, 0.45f, C2D_Color32(100, 255, 160, 255), line);
-	}
-	if (app->state == ST_MESSAGE || app->state == ST_BOOTING || app->state == ST_CONFIRM_UNINSTALL) {
+
+	if (app->state == ST_FLASHCART_WARN) {
+		C2D_DrawRectSolid(8, 100, 0.3f, 384, 120, C2D_Color32(120, 30, 20, 255));
+		draw_text(16, 108, 0.55f, C2D_Color32(255, 220, 80, 255), app->msgTitle);
+		draw_text(16, 140, 0.38f, C2D_Color32(255, 240, 220, 255), app->msgBody);
+	} else if (app->state == ST_COLOR_SEQ) {
+		int c = app->colorSeq[app->colorIndex % COLOR_SEQ_LEN];
+		C2D_DrawRectSolid(40, 110, 0.3f, 320, 90, seq_color_u32(c));
+		draw_text(16, 100, 0.5f, C2D_Color32(255, 255, 255, 255), app->msgTitle);
+		draw_text(16, 210, 0.38f, C2D_Color32(200, 200, 210, 255), app->msgBody);
+	} else if (app->state == ST_MESSAGE || app->state == ST_BOOTING || app->state == ST_CONFIRM_UNINSTALL) {
 		draw_text(12, 130, 0.55f, C2D_Color32(255, 220, 100, 255), app->msgTitle);
 		draw_text(12, 160, 0.4f, C2D_Color32(220, 220, 230, 255), app->msgBody);
 	}
