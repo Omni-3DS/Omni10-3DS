@@ -1,9 +1,13 @@
 /*
- * Omni10-3DS
- * Main entry point
+ * Omni10-3DS — source/main.c (SCAFFOLDING ONLY)
  *
- * Copyright (C) 2026 Omni10 Team
- * Licensed under GPL-3.0
+ * *** THIS FILE IS NOT BUILT INTO Omni10.firm ***
+ *
+ * The real payload is:
+ *   firm/arm9/main.c   (~29KB, full menu + HOME SCRIPTS + X + FTP + browser)
+ *
+ * Build:  make firm
+ * See:    source/README.md
  */
 
 #include "common.h"
@@ -15,12 +19,12 @@
 #include "splash.h"
 #include "lang.h"
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     (void)argc;
     (void)argv;
 
-    // Initialize core systems
+    /* Scaffolding init — not used by current FIRM Makefile */
     sys_init();
     lang_init();
     ui_init();
@@ -28,32 +32,22 @@ int main(int argc, char** argv)
     net_init();
     o10_init();
     splash_init();
-
-    // Show splash screen
     splash_show();
-
-    // TODO: Mount SD + NAND partitions
-    // TODO: Load language from config
-    // TODO: Check for autorun script
-    // TODO: Start main file browser / UI loop
 
     ui_echo(_("APP_NAME"));
     ui_echo(_("TAGLINE"));
     ui_echo(_("BOOTING"));
 
-    // Main loop placeholder
-    // while (running) {
-    //     ui_handle_input();
-    // }
+    /*
+     * TODO (modular port from firm/arm9/main.c):
+     *  - main menu loop
+     *  - HOME SCRIPTS hub (X button)
+     *  - file browser / FTP
+     *  - battery / wifi status bar
+     */
 
-    // Cleanup
-    splash_deinit();
-    o10_deinit();
-    net_deinit();
-    fs_deinit();
-    ui_deinit();
-    lang_deinit();
-    sys_deinit();
-
+    while (1) {
+        /* idle */
+    }
     return 0;
 }
