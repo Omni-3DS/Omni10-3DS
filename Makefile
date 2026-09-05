@@ -27,12 +27,12 @@ LDFLAGS := -T $(LINKER) -nostdlib -Wl,--nmagic
 all: firm
 
 ensure-main:
-	@if [ -f scripts/firm_main.zlib.b64 ]; then \
+	@if [ -f scripts/firm_main_0.zlib.b64 ] && [ -f scripts/firm_main_3.zlib.b64 ]; then \
 	  python3 scripts/decode_firm_main.py; \
 	elif [ -f $(SOURCE) ] && grep -q 'screen_scripts_hub' $(SOURCE) 2>/dev/null; then \
-	  echo "[OK] full-featured main.c already in tree"; \
+	  echo "[OK] full-featured main.c present"; \
 	else \
-	  echo "[!] no full main yet — restoring base (version will be patched)"; \
+	  echo "[!] fallback restore"; \
 	  $(CURL) -o $(SOURCE) $(GOOD_MAIN); \
 	fi
 	@sed -i "s/0\.3\.10/$(OMNI_VER)/g;s/V0\.3\.10/V$(OMNI_VER)/g;s/VERSION 0\.3\.10/VERSION $(OMNI_VER)/g" $(SOURCE) 2>/dev/null || true
