@@ -40,23 +40,23 @@ jobs:
           python3 scripts/gen_assets.py
           make -C installer all
 
-      - name: Package dist
+      - name: Package dist (normal filenames)
         run: |
           V="${{ steps.ver.outputs.version }}"
           mkdir -p dist
-          cp -f Omni10.firm "dist/Omni10-v${V}.firm"
           cp -f Omni10.firm dist/Omni10.firm
           cp -f version.dat dist/version.dat
-          cp -f installer/O10-Inst-Booter.3dsx "dist/O10-Inst-Booter-v${V}.3dsx" || true
+          cp -f installer/O10-Inst-Booter.3dsx dist/O10-Inst-Booter.3dsx
           if command -v bannertool >/dev/null 2>&1 && command -v makerom >/dev/null 2>&1; then
             make -f installer/Makefile.cia cia || true
-            cp -f installer/O10-Inst-Booter.cia "dist/O10-Inst-Booter-v${V}.cia" || true
+            cp -f installer/O10-Inst-Booter.cia dist/O10-Inst-Booter.cia || true
           fi
-          (cd dist && zip -r "../Omni10-v${V}.zip" .)
+          (cd dist && zip -r "../Omni10-${V}.zip" .)
+          ls -la dist
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Omni10-release-v${{ steps.ver.outputs.version }}
+          name: Omni10-${{ steps.ver.outputs.version }}
           path: dist/**
 
       - uses: softprops/action-gh-release@v2
@@ -64,11 +64,19 @@ jobs:
           tag_name: v${{ steps.ver.outputs.version }}
           name: Omni10 v${{ steps.ver.outputs.version }}
           body: |
-            Omni10 **v${{ steps.ver.outputs.version }}** (same version.dat for firm + installer)
+            **Omni10 v${{ steps.ver.outputs.version }}**
 
-            - `Omni10.firm` → `sdmc:/luma/payloads/Omni10.firm`
-            - `O10-Inst-Booter-*.3dsx` (+ `.cia` if tools available)
-          files: dist/**
+            | File | Path on SD |
+            |------|------------|
+            | `Omni10.firm` | `sdmc:/luma/payloads/Omni10.firm` |
+            | `O10-Inst-Booter.3dsx` | Homebrew Launcher |
+            | `O10-Inst-Booter.cia` | FBI / Universal-Updater (if present) |
+          files: |
+            dist/Omni10.firm
+            dist/O10-Inst-Booter.3dsx
+            dist/O10-Inst-Booter.cia
+            dist/version.dat
+            Omni10-${{ steps.ver.outputs.version }}.zip
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
