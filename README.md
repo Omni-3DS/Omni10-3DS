@@ -1,49 +1,37 @@
 # Omni10-3DS
 
-**Full Access. No Limits.**
+**Full Access. No Limits.** Custom 3DS FIRM + installer — built to go beyond classic payloads (see [docs/VS_GM9.md](docs/VS_GM9.md)).
 
-Custom Nintendo **3DS FIRM** for **Luma3DS** (Old / New 3DS / New 2DS XL).
+## Components
 
-## Install
+| Piece | Role |
+|-------|------|
+| **Omni10.firm** | Luma payload (ARM9, ARM11 scaffold) |
+| **O10-Inst-Booter** | CIA/3dsx installer · updater · booter + banner **sound** |
+| **o10script** | On-console `.slr` → opaque `.o10` |
+| **Lua** | Planned second runner |
+| **Assets** | `scripts/gen_assets.py` → icon / banner / splash / wav |
 
-1. Get `Omni10.firm` from [Actions](https://github.com/Omni-3DS/Omni10-3DS/actions)
-2. `sd:/luma/payloads/Omni10.firm`
-3. Hold **START** on boot → **Omni10**
+## Install firm
 
-## Controls
-
-| Input | Action |
-|-------|--------|
-| D-Pad | Navigate |
-| A / B | Select / Back |
-| **X** | **HOME Scripts** (.o10 / .slr / .lua) |
-| START+SELECT | Power off |
-
-## Highlights (v0.6)
-
-- Status bar: **NET** + **BATTERY %** (MCU)
-- System info, language EN/DE
-- HOME Scripts hub (O10 / SLR / Lua)
-- Battery info, button test, LED test
-- Internet / WiFi MCU test
-- Reboot / power off
-- o10script design: compile **only on 3DS** → opaque `.o10`
-
-Full list: [docs/FEATURES.md](docs/FEATURES.md)
-
-## o10script
-
-```text
-sdmc:/o10/slr/*.slr  →  compile on console  →  *.o10  →  run
-```
-
-No PC compile for console `.o10`. Docs: [O10-SLR](https://github.com/Omni-3DS/O10-SLR)
+1. Release artifact `Omni10.firm` → `sdmc:/luma/payloads/Omni10.firm`
+2. Or use **O10-Inst-Booter** → Install → **Boot** (hold **START** → Luma → Omni10)
 
 ## Build
 
 ```bash
-make firm   # devkitARM + firmtool
+make firm
+python3 scripts/gen_assets.py
+make -C installer          # 3dsx
+# make -f installer/Makefile.cia cia   # needs bannertool + makerom
 ```
+
+CI: `version.dat` → automatic GitHub Release.
+
+## Docs
+
+- [FEATURES](docs/FEATURES.md) · [FIRM FS/FTP](docs/FIRM_FS_FTP.md) · [CIA](docs/CIA_COMPLETE.md)
+- [o10 / Lua / assets](docs/O10_LUA_ASSETS.md) · [ARM11](firm/arm11/README.md)
 
 ## License
 

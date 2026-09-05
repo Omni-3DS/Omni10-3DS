@@ -1,0 +1,21 @@
+# Optional CIA packaging for O10-Inst-Booter
+# Requires: bannertool, makerom on PATH; run gen_assets.py first
+
+TARGET   := O10-Inst-Booter
+BANNER   := ../assets/banner/banner.png
+ICON     := ../assets/icons/icon.png
+AUDIO    := ../assets/audio/banner.wav
+RSF      := meta/app.rsf
+BANNERTOOL ?= bannertool
+MAKEROM    ?= makerom
+
+.PHONY: assets cia
+
+assets:
+	python3 ../scripts/gen_assets.py
+
+cia: assets $(TARGET).elf $(TARGET).smdh
+	$(BANNERTOOL) makebanner -i "$(BANNER)" -a "$(AUDIO)" -o build/banner.bnr
+	$(BANNERTOOL) makesmdh -s "O10 Inst Booter" -l "Omni10 Installer Updater Booter" -p "Omni-3DS" -i "$(ICON)" -o $(TARGET).smdh
+	$(MAKEROM) -f cia -o $(TARGET).cia -elf $(TARGET).elf -rsf $(RSF) -icon $(TARGET).smdh -banner build/banner.bnr
+	@echo built $(TARGET).cia with banner sound
