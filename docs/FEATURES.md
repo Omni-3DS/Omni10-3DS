@@ -1,39 +1,26 @@
 # Omni10-3DS Features
 
-## Status bar (header)
+## Omni10.firm (Luma payload)
 
-| Widget | Source |
-|--------|--------|
-| **NET ON/OFF/?** | MCU WiFi LED / wireless flag |
-| **BAT nn%** (+ if charging) | MCU `0x0B` percent, `0x0F` charge bit |
+| Feature | Status |
+|---------|--------|
+| Boot under Luma | Yes |
+| Menu UI EN/DE | Yes |
+| Status bar NET + BATTERY % | Yes |
+| System / battery / buttons / LED | Yes |
+| HOME Scripts (O10/SLR/Lua hub) | Yes |
+| o10script on-device design | Yes |
+| SDMMC file browser in FIRM | Next |
+| FTP inside FIRM | Next |
 
-## Menu
+## O10-Inst-Booter (CIA/3dsx)
 
-| Entry | Function |
-|-------|----------|
-| About | Version / branding |
-| System info | Console family, entry, FB, lang, WiFi, battery |
-| HOME SCRIPTS | .O10 / .SLR / .LUA hub (**X** shortcut) |
-| Settings | EN/DE |
-| Internet / WiFi | MCU status refresh |
-| Battery info | Percent, charging, MCU regs |
-| Button test | A/B/X/Y/L/R/Start live |
-| LED test | WiFi LED / power LED via MCU |
-| File browser | Placeholder (SDMMC next) |
-| FTP | Placeholder |
-| Reboot / Power off | MCU power |
-
-## Scripts
-
-- **.o10** built-in demos
-- **.slr** on-device path `sdmc:/o10/slr/`
-- **.lua** reserved `sdmc:/o10/lua/`
-
-## Controls
-
-| Key | Action |
-|-----|--------|
-| D-Pad | Navigate |
-| A / B | Select / Back |
-| **X** | HOME Scripts hub |
-| START+SELECT | Power off |
+| Feature | Status |
+|---------|--------|
+| Install / update / uninstall firm | Yes |
+| Boot via START hold → Luma | Yes |
+| **File browser** (`sdmc:/`) | Yes |
+| **FTP server** port 5000 | Yes (minimal) |
+| Flashcart warn + LED colors | Yes |
+| citro2d UI | Yes |
+| Auto release via version.dat | Yes |

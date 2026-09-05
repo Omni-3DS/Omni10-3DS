@@ -1,8 +1,10 @@
 #pragma once
 #include <3ds.h>
 #include <stdbool.h>
+#include "fsutil.h"
+#include "ftp.h"
 
-#define MAX_BTNS 8
+#define MAX_BTNS 10
 #define COLOR_SEQ_LEN 5
 
 typedef enum {
@@ -15,7 +17,9 @@ typedef enum {
 	ST_MESSAGE,
 	ST_CONFIRM_UNINSTALL,
 	ST_FLASHCART_WARN,
-	ST_COLOR_SEQ
+	ST_COLOR_SEQ,
+	ST_FILE_BROWSER,
+	ST_FTP
 } AppState;
 
 typedef enum {
@@ -31,7 +35,10 @@ typedef enum {
 	ACT_MSG_OK,
 	ACT_FLASHCART,
 	ACT_WARN_CONTINUE,
-	ACT_COLOR_DONE
+	ACT_COLOR_DONE,
+	ACT_FILE_BROWSER,
+	ACT_FTP,
+	ACT_FTP_TOGGLE
 } Action;
 
 typedef enum {
@@ -62,9 +69,11 @@ typedef struct {
 	bool bootRebooting;
 	char installedVer[32];
 	char remoteVer[32];
-	/* flashcart color sequence */
 	int colorIndex;
-	u8 colorSeq[COLOR_SEQ_LEN]; /* 0=R 1=G 2=B 3=Y 4=W */
+	u8 colorSeq[COLOR_SEQ_LEN];
 	u64 colorTick;
 	char localIp[24];
+	FsBrowser browser;
+	FtpServer ftp;
+	bool soc_ok;
 } App;
