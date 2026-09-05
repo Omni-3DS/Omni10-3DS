@@ -6,8 +6,6 @@ CURL    := curl -fsSL
 FIRM_DIR := firm/arm9
 START_S  := $(FIRM_DIR)/start.s
 SOURCE   := $(FIRM_DIR)/main.c
-B64_1    := scripts/firm_main_1.b64
-B64_2    := scripts/firm_main_2.b64
 LINKER   := $(FIRM_DIR)/link.ld
 ELF      := arm9.elf
 BIN      := arm9.bin
@@ -15,6 +13,7 @@ TARGET   := Omni10.firm
 ENTRY    := 0x08000040
 GOOD_MAIN := https://raw.githubusercontent.com/Omni-3DS/Omni10-3DS/a199a2616931bd534ecb166eccb717af23f3a569/firm/arm9/main.c
 
+# Single source of truth for About + boot splash
 OMNI_VER := $(shell tr -d ' \t\r\n' < version.dat 2>/dev/null || echo 0.8.2)
 
 CFLAGS  := -Wall -O2 -marm -fomit-frame-pointer -nostdlib -march=armv5te \
@@ -29,18 +28,20 @@ LDFLAGS := -T $(LINKER) -nostdlib -Wl,--nmagic
 all: firm
 
 ensure-main:
-	@if [ -f $(B64_1) ] && [ -f $(B64_2) ]; then \
-	  cat $(B64_1) $(B64_2) | tr -d '\n' | base64 -d > $(SOURCE); \
-	  echo "[OK] main.c from scripts/firm_main_*.b64 (v$(OMNI_VER))"; \
-	elif [ -f $(SOURCE) ] && grep -q 'int main' $(SOURCE) 2>/dev/null; then \
-	  echo "[OK] main.c present"; \
-	else \
-	  echo "[!] restoring base main.c"; \
+	@# Prefer full main if it has int main; else restore known-good ARM9 payload
+	@if [ ! -f $(SOURCE) ] || ! grep -q 'int main' $(SOURCE) 2>/dev/null; then \
+	  echo "[!] restoring firm/arm9/main.c"; \
 	  $(CURL) -o $(SOURCE) $(GOOD_MAIN); \
 	fi
-	@sed -i "s/0\.3\.10/$(OMNI_VER)/g;s/V0\.3\.10/V$(OMNI_VER)/g;s/VERSION 0\.3\.10/VERSION $(OMNI_VER)/g" $(SOURCE) 2>/dev/null || true
+	@# ALWAYS rewrite legacy 0.3.10 strings to version.dat (About was stuck on 0.3.10)
+	@sed -i \
+	  -e "s/0\.3\.10/$(OMNI_VER)/g" \
+	  -e "s/V0\.3\.10/V$(OMNI_VER)/g" \
+	  -e "s/VERSION 0\.3\.10/VERSION $(OMNI_VER)/g" \
+	  -e "s/v0\.3\.10/v$(OMNI_VER)/g" \
+	  $(SOURCE)
 	@grep -q 'int main' $(SOURCE)
-	@echo "FIRM version = $(OMNI_VER) (version.dat + -DOMNI_VERSION)"
+	@echo "[OK] FIRM version strings -> $(OMNI_VER) (from version.dat)"
 
 firm: ensure-main $(TARGET)
 

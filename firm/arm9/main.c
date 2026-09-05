@@ -1,1 +1,1 @@
-/* SEE push - loading full file */
+/* Placeholder — Makefile ensure-main restores real payload and injects version.dat */
