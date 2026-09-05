@@ -26,10 +26,21 @@ u32 omni_wifi_status(void) {
 	return (u32)(osGetWifiStrength() > 0);
 }
 
+void omni_ensure_o10_dirs(void) {
+	mkdir(O10_ROOT, 0777);
+	mkdir(O10_SCRIPTS, 0777);
+	mkdir(O10_SLR, 0777);
+	mkdir(O10_LUA, 0777);
+	mkdir("sdmc:/o10/r4", 0777);
+	mkdir("sdmc:/o10/dstt", 0777);
+	mkdir(OMNI_DIR, 0777);
+}
+
 static void ensure_dirs(void) {
 	mkdir("sdmc:/luma", 0777);
 	mkdir(LUMA_PAYLOADS, 0777);
 	mkdir(OMNI_DIR, 0777);
+	omni_ensure_o10_dirs();
 }
 
 Result omni_install_from_urls(void (*progress)(const char*, int, int, u32, u32, void*), void *ud) {
