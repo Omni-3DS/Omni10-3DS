@@ -1,6 +1,6 @@
 /* version from Makefile -DOMNI_VERSION if set */
 #ifndef OMNI_VERSION
-#define OMNI_VERSION "0.8.2"
+#define OMNI_VERSION "0.8.6"
 #endif
 /* Omni10-3DS v0.8.2 - X-flip orient + left + net */
 #include <stdint.h>
@@ -88,17 +88,159 @@ static void draw_bot_help(const char *l1,const char *l2){clear_bot(COL_BG_R,COL_
 static int confirm(const char *title,const char *msg){clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();draw_text(left_x(title,12),70,title,255,200,80);draw_text(left_x(msg,12),110,msg,200,200,210);draw_text(left_x(L("A = YES   B = NO","A = JA   B = NEIN"),12),150,L("A = YES   B = NO","A = JA   B = NEIN"),160,180,200);draw_footer(L("CONFIRM","BESTAETIGEN"));draw_bot_help(L("Confirm action","Aktion bestaetigen"),NULL);drain();while(1){uint32_t k=wait_key();if(k&BTN_A)return 1;if(k&BTN_B)return 0;}}
 static void screen_about(void){clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();draw_text(left_x("OMNI10-3DS",12),50,"OMNI10-3DS",255,255,255);draw_text(left_x(L("CUSTOM FIRM PAYLOAD","EIGENES FIRM PAYLOAD"),12),72,L("CUSTOM FIRM PAYLOAD","EIGENES FIRM PAYLOAD"),140,200,230);draw_text(left_x("VERSION " OMNI_VERSION,12),100,"VERSION " OMNI_VERSION,160,160,180);draw_text(left_x(".O10  |  LUA  |  FTP",12),122,".O10  |  LUA  |  FTP",100,180,210);draw_text(left_x("GITHUB.COM/OMNI-3DS",12),144,"GITHUB.COM/OMNI-3DS",90,140,180);draw_text(left_x(L("FULL ACCESS. NO LIMITS.","VOLLER ZUGRIFF. KEINE LIMITS."),12),176,L("FULL ACCESS. NO LIMITS.","VOLLER ZUGRIFF. KEINE LIMITS."),0,200,180);draw_footer(L("B = BACK","B = ZURUECK"));draw_bot_help(L("About Omni10","Ueber Omni10"),L("B to go back","B = zurueck"));drain();while(1){if(wait_key()&BTN_B)return;}}
 static void screen_sysinfo(void){clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();draw_text(left_x(L("SYSTEM INFO","SYSTEMINFO"),12),40,L("SYSTEM INFO","SYSTEMINFO"),200,220,255);draw_text(left_x(L("CONSOLE:","KONSOLE:"),12),70,L("CONSOLE:","KONSOLE:"),160,160,180);draw_text(140,70,is_new3ds()?"NEW 3DS FAMILY":"OLD 3DS FAMILY",0,255,180);draw_text(left_x("ENTRY:",12),90,"ENTRY:",160,160,180);draw_text(140,90,"0x08000040",200,200,220);draw_text(left_x("FB:",12),110,"FB:",160,160,180);draw_text(140,110,"RGB888",200,200,220);draw_text(left_x("LANG:",12),130,"LANG:",160,160,180);draw_text(140,130,g_lang==LANG_DE?"DE":"EN",200,200,220);draw_text(left_x("STATUS:",12),150,"STATUS:",160,160,180);draw_text(140,150,L("RUNNING","LAEUFT"),0,255,120);draw_text(left_x("WIFI:",12),170,"WIFI:",160,160,180);if(g_wifi_status>0)draw_text(140,170,"ON",40,255,120);else if(g_wifi_status==0)draw_text(140,170,"OFF",255,80,80);else draw_text(140,170,"?",180,180,100);draw_footer(L("B = BACK","B = ZURUECK"));draw_bot_help(L("Hardware details","Hardwaredetails"),NULL);drain();while(1){if(wait_key()&BTN_B)return;}}
-static void screen_internet(void){while(1){wifi_probe();clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();draw_text(left_x(L("INTERNET TEST","INTERNET TEST"),12),40,L("INTERNET TEST","INTERNET TEST"),200,220,255);draw_text(left_x(L("STATUS:","STATUS:"),12),70,L("STATUS:","STATUS:"),160,160,180);if(g_wifi_status>0)draw_text(140,70,L("CONNECTED / LED ON","VERBUNDEN / LED AN"),40,255,120);else if(g_wifi_status==0)draw_text(140,70,L("OFF / DISABLED","AUS / DEAKTIVIERT"),255,80,80);else draw_text(140,70,L("UNKNOWN","UNBEKANNT"),180,180,100);draw_text(left_x(L("SOURCE: MCU I2C","QUELLE: MCU I2C"),12),100,L("SOURCE: MCU I2C","QUELLE: MCU I2C"),120,140,160);draw_text(left_x("REG 0x2A WIFI LED",12),120,"REG 0x2A WIFI LED",120,140,160);draw_text(left_x("REG 0x61 WIRELESS FLAG",12),140,"REG 0x61 WIRELESS FLAG",120,140,160);draw_text(left_x(L("A = REFRESH","A = AKTUALISIEREN"),12),175,L("A = REFRESH","A = AKTUALISIEREN"),160,180,200);draw_text(left_x(L("B = BACK","B = ZURUECK"),12),195,L("B = BACK","B = ZURUECK"),160,180,200);draw_footer(L("A REFRESH  |  B BACK","A AKTUALISIEREN  |  B ZURUECK"));draw_bot_help(L("WiFi connection test","WLAN Verbindungstest"),L("Reads MCU WiFi state","Liest MCU WLAN Status"));drain();uint32_t k=wait_key();if(k&BTN_B)return;}}
+static void screen_internet(void){while(1){wifi_probe();clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();draw_text(left_x(L("INTERNET TEST","INTERNET TEST"),12),40,L("INTERNET TEST","INTERNET TEST"),200,220,255);draw_text(left_x(L("STATUS:","STATUS:"),12),70,L("STATUS:","STATUS:"),160,160,180);if(g_wifi_status>0)draw_text(140,70,L("CONNECTED / LED ON","VERBUNDEN / LED AN"),40,255,120);else if(g_wifi_status==0)draw_text(140,70,L("OFF / DISABLED","AUS / DEAKTIVIERT"),255,80,80);else draw_text(140,70,L("UNKNOWN","UNBEKANNT"),180,180,100);draw_text(left_x(L("SOURCE: MCU I2C","QUELLE: MCU I2C"),12),100,L("SOURCE: MCU I2C","QUELLE: MCU I2C"),120,140,160);
+draw_text(left_x(L("TCP: ARM11 NEEDED","TCP: ARM11 NOETIG"),12),155,L("TCP: ARM11 NEEDED","TCP: ARM11 NOETIG"),255,180,80);draw_text(left_x("REG 0x2A WIFI LED",12),120,"REG 0x2A WIFI LED",120,140,160);draw_text(left_x("REG 0x61 WIRELESS FLAG",12),140,"REG 0x61 WIRELESS FLAG",120,140,160);draw_text(left_x(L("A = REFRESH","A = AKTUALISIEREN"),12),175,L("A = REFRESH","A = AKTUALISIEREN"),160,180,200);draw_text(left_x(L("B = BACK","B = ZURUECK"),12),195,L("B = BACK","B = ZURUECK"),160,180,200);draw_footer(L("A REFRESH  |  B BACK","A AKTUALISIEREN  |  B ZURUECK"));draw_bot_help(L("WiFi connection test","WLAN Verbindungstest"),L("Reads MCU WiFi state","Liest MCU WLAN Status"));drain();uint32_t k=wait_key();if(k&BTN_B)return;}}
 static void screen_settings(void){int sel=0;while(1){clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();draw_text(left_x(L("SETTINGS","EINSTELLUNGEN"),12),40,L("SETTINGS","EINSTELLUNGEN"),200,220,255);const char *items[2];items[0]=g_lang==LANG_DE?"SPRACHE: DEUTSCH":"LANGUAGE: ENGLISH";items[1]=L("BACK","ZURUECK");for(int i=0;i<2;i++){int y=90+i*28;if(i==sel){fill_rect(8,y-4,SCREEN_W-16,18,0,70,110);draw_text(left_x(items[i],16),y,items[i],255,255,120);}else draw_text(left_x(items[i],16),y,items[i],190,195,210);}draw_footer(L("A SELECT  |  B BACK","A WAEHLEN  |  B ZURUECK"));draw_bot_help(L("Change language","Sprache aendern"),L("A toggle  B back","A umschalten  B zurueck"));drain();uint32_t k=wait_key();if(k&BTN_B)return;if((k&BTN_UP)||(k&BTN_DOWN))sel=1-sel;if(k&BTN_A){if(sel==0)g_lang=1-g_lang;else return;}}}
 
 /* o10 / SLR / Lua script hub (X = quick HOME scripts) */
-static const char *demo_hello="PRINT HELLO FROM O10\nWAIT\nPRINT OMNI10 RULES\nWAIT\nPRINT DONE\n";
-static const char *demo_info="PRINT SYSTEM CHECK\nWAIT\nPRINT PAYLOAD OK\nWAIT\nPRINT END\n";
+static const char *demo_hello="PRINT HELLO FROM O10\nWAIT 200\nINFO\nBAT\nWIFI\nPRINT OMNI10 RULES\nWAIT 100\nPRINT DONE\n";
+static const char *demo_info="PRINT SYSTEM CHECK\nINFO\nBAT\nWIFI\nWAIT 150\nPRINT PAYLOAD OK\nPRINT END\n";
 static const char *slr_hello="print \"Hello SLR\"\nwait 300\ninfo\nprint \"Done\"\n";
-static void o10_run(const char *src){char line[48];int li=0,log_y=60;clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();draw_text(left_x(L("O10 RUN","O10 RUN"),12),40,L("O10 RUN","O10 RUN"),0,220,255);draw_bot_help(L("Running .o10"," .o10 laeuft"),L("B abort","B abbruch"));drain();while(*src){if(pad_raw()&BTN_B)break;if(*src=='\n'||*src==0){line[li]=0;if(li>0){if(strncmp_s(line,"PRINT ",6)==0){draw_text(left_x(line+6,12),log_y,line+6,200,255,200);log_y+=14;if(log_y>200)log_y=60;drain();}else if(strncmp_s(line,"WAIT",4)==0)delay(600000);else if(strncmp_s(line,"POWEROFF",8)==0)power_off();else if(strncmp_s(line,"REBOOT",6)==0)reboot();}li=0;if(*src==0)break;src++;continue;}if(li<46)line[li++]=*src;src++;}draw_text(left_x(L("A/B BACK","A/B ZURUECK"),12),210,L("A/B BACK","A/B ZURUECK"),160,160,180);drain();while(1){uint32_t k=wait_key();if(k&(BTN_A|BTN_B))return;}}
-static void screen_lua_stub(void){clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();draw_text(left_x("LUA",12),50,"LUA",200,220,255);draw_text(left_x(L("NOT EMBEDDED YET","NOCH NICHT DRIN"),12),90,L("NOT EMBEDDED YET","NOCH NICHT DRIN"),255,180,80);draw_text(left_x("sdmc:/o10/lua/",12),120,"sdmc:/o10/lua/",140,150,170);draw_text(left_x(L("B = BACK","B = ZURUECK"),12),160,L("B = BACK","B = ZURUECK"),160,180,200);draw_footer(L("B BACK","B ZURUECK"));draw_bot_help(L("Lua planned","Lua geplant"),NULL);drain();while(1){if(wait_key()&BTN_B)return;}}
+static void o10_log_line(int *log_y, const char *msg){
+        draw_text(left_x(msg,12),*log_y,msg,200,255,200);
+        *log_y+=14;if(*log_y>200)*log_y=60;drain();
+}
+/* o10 text VM */
+static void o10_run(const char *src){
+        char line[64];int li=0,log_y=60;
+        clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();
+        draw_text(left_x(L("O10 RUN","O10 RUN"),12),40,L("O10 RUN","O10 RUN"),0,220,255);
+        draw_bot_help(L("Running .o10"," .o10 laeuft"),L("B abort","B abbruch"));drain();
+        while(*src){
+                if(pad_raw()&BTN_B)break;
+                if(*src=='\n'||*src==0){
+                        line[li]=0;
+                        if(li>0){
+                                if(strncmp_s(line,"PRINT ",6)==0)o10_log_line(&log_y,line+6);
+                                else if(strncmp_s(line,"WAIT ",5)==0){
+                                        int n=0;const char *p=line+5;while(*p>='0'&&*p<='9'){n=n*10+(*p-'0');p++;}
+                                        if(n<=0)n=300;for(int i=0;i<n;i++){if(pad_raw()&BTN_B)break;delay(2000);}
+                                }
+                                else if(strncmp_s(line,"WAIT",4)==0)delay(600000);
+                                else if(strncmp_s(line,"POWEROFF",8)==0)power_off();
+                                else if(strncmp_s(line,"REBOOT",6)==0)reboot();
+                                else if(strncmp_s(line,"CLS",3)==0){clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();log_y=60;}
+                                else if(strncmp_s(line,"LED ",4)==0){
+                                        int n=0;const char *p=line+4;while(*p>='0'&&*p<='9'){n=n*10+(*p-'0');p++;}
+                                        i2c_init();i2c_write_mcu(0x2A,(uint8_t)(n&0xFF));o10_log_line(&log_y,"LED SET");
+                                }
+                                else if(strncmp_s(line,"BAT",3)==0){
+                                        battery_probe();char b[16];int i=0;b[i++]='B';b[i++]='=';
+                                        int p=g_battery<0?0:g_battery;if(p>=100){b[i++]='1';b[i++]='0';b[i++]='0';}
+                                        else if(p>=10){b[i++]=(char)('0'+p/10);b[i++]=(char)('0'+p%10);}else b[i++]=(char)('0'+p);
+                                        b[i++]='%';b[i]=0;o10_log_line(&log_y,b);
+                                }
+                                else if(strncmp_s(line,"WIFI",4)==0){
+                                        wifi_probe();o10_log_line(&log_y,g_wifi_status>0?"WIFI ON":(g_wifi_status==0?"WIFI OFF":"WIFI ?"));
+                                }
+                                else if(strncmp_s(line,"INFO",4)==0){o10_log_line(&log_y,is_new3ds()?"NEW3DS":"OLD3DS");o10_log_line(&log_y,"OMNI " OMNI_VERSION);}
+                                else if(line[0]=='#'){}
+                                else o10_log_line(&log_y,line);
+                        }
+                        li=0;if(*src==0)break;src++;continue;
+                }
+                if(li<62)line[li++]=*src;src++;
+        }
+        draw_text(left_x(L("A/B BACK","A/B ZURUECK"),12),210,L("A/B BACK","A/B ZURUECK"),160,160,180);
+        drain();while(1){uint32_t k=wait_key();if(k&(BTN_A|BTN_B))return;}
+}
+/* Binary .o10 magic O10\\0 — ops: 01 PRINT, 02 WAIT u16, 03 REBOOT, 04 POWEROFF, 05 CLS, 06 LED, 07 BAT, 08 WIFI, 09 INFO, FF END */
+static void o10_run_bin(const uint8_t *bin,int len){
+        if(len<4||bin[0]!='O'||bin[1]!='1'||bin[2]!='0')return;
+        int i=4,log_y=60;
+        clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();
+        draw_text(left_x("O10 BIN",12),40,"O10 BIN",0,220,255);drain();
+        while(i<len){
+                if(pad_raw()&BTN_B)break;
+                uint8_t op=bin[i++];
+                if(op==0xFF)break;
+                if(op==0x01){char buf[48];int j=0;while(i<len&&bin[i]&&j<47)buf[j++]=bin[i++];if(i<len)i++;buf[j]=0;o10_log_line(&log_y,buf);}
+                else if(op==0x02&&i+1<len){int n=bin[i]|(bin[i+1]<<8);i+=2;if(n<=0)n=100;for(int t=0;t<n;t++){if(pad_raw()&BTN_B)break;delay(2000);}}
+                else if(op==0x03)reboot();
+                else if(op==0x04)power_off();
+                else if(op==0x05){clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();log_y=60;}
+                else if(op==0x06&&i<len){i2c_init();i2c_write_mcu(0x2A,bin[i++]);o10_log_line(&log_y,"LED");}
+                else if(op==0x07){battery_probe();o10_log_line(&log_y,"BAT");}
+                else if(op==0x08){wifi_probe();o10_log_line(&log_y,g_wifi_status>0?"WIFI ON":"WIFI OFF");}
+                else if(op==0x09)o10_log_line(&log_y,"OMNI " OMNI_VERSION);
+                else break;
+        }
+        draw_text(left_x(L("A/B BACK","A/B ZURUECK"),12),210,L("A/B BACK","A/B ZURUECK"),160,160,180);
+        drain();while(1){uint32_t k=wait_key();if(k&(BTN_A|BTN_B))return;}
+}
+/* Mini-Lua runtime */
+static void lua_run(const char *src){
+        char line[80];int li=0,log_y=60;
+        clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();
+        draw_text(left_x("LUA",12),40,"LUA",0,220,255);
+        draw_bot_help(L("Mini-Lua","Mini-Lua"),L("B abort","B abbruch"));drain();
+        while(*src){
+                if(pad_raw()&BTN_B)break;
+                if(*src=='\n'||*src==0){
+                        line[li]=0;
+                        if(li>0){
+                                const char *p=line;while(*p==' '||*p=='\t')p++;
+                                if(strncmp_s(p,"print(",6)==0){
+                                        char msg[48];int j=0;p+=6;if(*p=='"'||*p=='\'')p++;
+                                        while(*p&&*p!=')'&&*p!='"'&&*p!='\''&&j<47)msg[j++]=*p++;msg[j]=0;o10_log_line(&log_y,msg);
+                                } else if(strncmp_s(p,"print ",6)==0){
+                                        char msg[48];int j=0;p+=6;if(*p=='"'||*p=='\'')p++;
+                                        while(*p&&*p!='"'&&*p!='\''&&j<47)msg[j++]=*p++;msg[j]=0;o10_log_line(&log_y,msg);
+                                } else if(strncmp_s(p,"wait(",5)==0){
+                                        int n=0;p+=5;while(*p>='0'&&*p<='9'){n=n*10+(*p-'0');p++;}
+                                        if(n<=0)n=200;for(int i=0;i<n;i++){if(pad_raw()&BTN_B)break;delay(2000);}
+                                } else if(strncmp_s(p,"info()",6)==0){o10_log_line(&log_y,"OMNI " OMNI_VERSION);o10_log_line(&log_y,is_new3ds()?"new3ds":"old3ds");}
+                                else if(strncmp_s(p,"led(",4)==0){int n=0;p+=4;while(*p>='0'&&*p<='9'){n=n*10+(*p-'0');p++;}i2c_init();i2c_write_mcu(0x2A,(uint8_t)n);o10_log_line(&log_y,"led");}
+                                else if(strncmp_s(p,"bat()",5)==0){battery_probe();o10_log_line(&log_y,"bat");}
+                                else if(strncmp_s(p,"wifi()",6)==0){wifi_probe();o10_log_line(&log_y,g_wifi_status>0?"wifi on":"wifi off");}
+                                else if(strncmp_s(p,"--",2)==0){}
+                                else if(p[0])o10_log_line(&log_y,p);
+                        }
+                        li=0;if(*src==0)break;src++;continue;
+                }
+                if(li<78)line[li++]=*src;src++;
+        }
+        draw_text(left_x(L("A/B BACK","A/B ZURUECK"),12),210,L("A/B BACK","A/B ZURUECK"),160,160,180);
+        drain();while(1){uint32_t k=wait_key();if(k&(BTN_A|BTN_B))return;}
+}
+static void screen_lua_stub(void){
+        static const char demo[]=
+                "-- Omni10 Mini-Lua\n"
+                "print(\"Hello Lua\")\n"
+                "wait(200)\n"
+                "info()\n"
+                "bat()\n"
+                "wifi()\n"
+                "print(\"Done\")\n";
+        int sel=0;
+        while(1){
+                clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();
+                draw_text(left_x("LUA",12),40,"LUA",200,220,255);
+                draw_text(left_x("sdmc:/o10/lua/",12),56,"sdmc:/o10/lua/",120,140,160);
+                const char *items[]={L("RUN DEMO","DEMO STARTEN"),L("API HELP","API HILFE"),L("BACK","ZURUECK")};
+                for(int i=0;i<3;i++){int y=90+i*24;if(i==sel){fill_rect(4,y-2,SCREEN_W-8,18,0,70,110);draw_text(left_x(items[i],12),y,items[i],255,255,120);}else draw_text(left_x(items[i],12),y,items[i],190,195,210);}
+                draw_footer(L("A SELECT | B BACK","A WAEHLEN | B ZURUECK"));
+                draw_bot_help(L("Mini-Lua in FIRM","Mini-Lua im FIRM"),L("print wait info led bat wifi","print wait info led bat wifi"));
+                drain();uint32_t k=wait_key();
+                if(k&BTN_B)return;
+                if(k&BTN_UP){sel--;if(sel<0)sel=2;}
+                if(k&BTN_DOWN){sel++;if(sel>2)sel=0;}
+                if(k&BTN_A){
+                        if(sel==0)lua_run(demo);
+                        else if(sel==1){
+                                clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();
+                                draw_text(left_x("print(\"x\")",12),50,"print(\"x\")",200,220,255);
+                                draw_text(left_x("wait(n)",12),70,"wait(n)",200,220,255);
+                                draw_text(left_x("info() led(n)",12),90,"info() led(n)",200,220,255);
+                                draw_text(left_x("bat() wifi()",12),110,"bat() wifi()",200,220,255);
+                                draw_text(left_x(L("B BACK","B ZURUECK"),12),160,L("B BACK","B ZURUECK"),160,180,200);
+                                drain();while(1){if(wait_key()&BTN_B)break;}
+                        } else return;
+                }
+        }
+}
 static void screen_slr_run(void){clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();draw_text(left_x("SLR",12),40,"SLR",200,220,255);draw_text(left_x(L("ON-DEVICE COMPILE","COMPILE AUF 3DS"),12),70,L("ON-DEVICE COMPILE","COMPILE AUF 3DS"),0,255,180);draw_text(left_x("sdmc:/o10/slr/",12),100,"sdmc:/o10/slr/",140,150,170);draw_text(left_x(L("A = DEMO SLR->O10","A = DEMO SLR->O10"),12),130,L("A = DEMO SLR->O10","A = DEMO SLR->O10"),160,180,200);draw_footer(L("A RUN | B BACK","A START | B ZURUECK"));draw_bot_help(L("SLR on console","SLR auf Konsole"),NULL);drain();while(1){uint32_t k=wait_key();if(k&BTN_B)return;if(k&BTN_A){/* treat SLR demo as text o10-like lines via print conversion */o10_run("PRINT Hello SLR\nWAIT\nPRINT Done\n");return;}}}
-static void screen_scripts_hub(void){int sel=0;while(1){clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();draw_text(left_x(L("HOME SCRIPTS","HOME SKRIPTE"),12),34,L("HOME SCRIPTS","HOME SKRIPTE"),200,220,255);draw_text(left_x("sdmc:/o10/",12),48,"sdmc:/o10/",120,140,160);const char *items[]={".O10  demos",".SLR  compile+run",".LUA  (soon)",L("BACK","ZURUECK")};const int n=4;for(int i=0;i<n;i++){int y=72+i*22;if(i==sel){fill_rect(4,y-2,SCREEN_W-8,18,0,70,110);draw_text(left_x(items[i],12),y,items[i],255,255,120);}else draw_text(left_x(items[i],12),y,items[i],190,195,210);}draw_footer(L("A SELECT | B/X BACK","A WAEHLEN | B/X ZURUECK"));draw_bot_help(L("X = open this hub","X = dieses Menue"),L("HOME scripts","HOME Skripte"));drain();uint32_t k=wait_key();if(k&(BTN_B|BTN_X))return;if(k&BTN_UP){sel--;if(sel<0)sel=n-1;}if(k&BTN_DOWN){sel++;if(sel>=n)sel=0;}if(k&BTN_A){if(sel==0){int s2=0;while(1){clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();draw_text(left_x(".O10",12),40,".O10",200,220,255);const char *o[]={"HELLO.O10","SYSCHECK.O10",L("BACK","ZURUECK")};for(int i=0;i<3;i++){int y=80+i*24;if(i==s2){fill_rect(4,y-2,SCREEN_W-8,18,0,70,110);draw_text(left_x(o[i],12),y,o[i],255,255,120);}else draw_text(left_x(o[i],12),y,o[i],190,195,210);}draw_footer(L("A RUN | B BACK","A START | B ZURUECK"));drain();uint32_t k2=wait_key();if(k2&BTN_B)break;if(k2&BTN_UP){s2--;if(s2<0)s2=2;}if(k2&BTN_DOWN){s2++;if(s2>2)s2=0;}if(k2&BTN_A){if(s2==0)o10_run(demo_hello);else if(s2==1)o10_run(demo_info);else break;}}}else if(sel==1)screen_slr_run();else if(sel==2)screen_lua_stub();else return;}}}
+static void screen_scripts_hub(void){int sel=0;while(1){clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();draw_text(left_x(L("HOME SCRIPTS","HOME SKRIPTE"),12),34,L("HOME SCRIPTS","HOME SKRIPTE"),200,220,255);draw_text(left_x("sdmc:/o10/",12),48,"sdmc:/o10/",120,140,160);const char *items[]={".O10  demos",".SLR  compile+run",".LUA  mini",L("BACK","ZURUECK")};const int n=4;for(int i=0;i<n;i++){int y=72+i*22;if(i==sel){fill_rect(4,y-2,SCREEN_W-8,18,0,70,110);draw_text(left_x(items[i],12),y,items[i],255,255,120);}else draw_text(left_x(items[i],12),y,items[i],190,195,210);}draw_footer(L("A SELECT | B/X BACK","A WAEHLEN | B/X ZURUECK"));draw_bot_help(L("X = open this hub","X = dieses Menue"),L("HOME scripts","HOME Skripte"));drain();uint32_t k=wait_key();if(k&(BTN_B|BTN_X))return;if(k&BTN_UP){sel--;if(sel<0)sel=n-1;}if(k&BTN_DOWN){sel++;if(sel>=n)sel=0;}if(k&BTN_A){if(sel==0){int s2=0;while(1){clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();draw_text(left_x(".O10",12),40,".O10",200,220,255);const char *o[]={"HELLO.O10","SYSCHECK.O10",L("BACK","ZURUECK")};for(int i=0;i<3;i++){int y=80+i*24;if(i==s2){fill_rect(4,y-2,SCREEN_W-8,18,0,70,110);draw_text(left_x(o[i],12),y,o[i],255,255,120);}else draw_text(left_x(o[i],12),y,o[i],190,195,210);}draw_footer(L("A RUN | B BACK","A START | B ZURUECK"));drain();uint32_t k2=wait_key();if(k2&BTN_B)break;if(k2&BTN_UP){s2--;if(s2<0)s2=2;}if(k2&BTN_DOWN){s2++;if(s2>2)s2=0;}if(k2&BTN_A){if(s2==0)o10_run(demo_hello);else if(s2==1)o10_run(demo_info);else break;}}}else if(sel==1)screen_slr_run();else if(sel==2)screen_lua_stub();else return;}}}
 
 static void screen_battery(void){while(1){battery_probe();clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();draw_text(left_x(L("BATTERY","AKKU"),12),40,L("BATTERY","AKKU"),200,220,255);
 {char buf[20];if(g_battery<0){draw_text(left_x(L("LEVEL: ?","STAND: ?"),12),80,L("LEVEL: ?","STAND: ?"),180,180,100);}
