@@ -1,0 +1,35 @@
+BasicInfo:
+  Title                   : O10InstBoot
+  CompanyCode             : "00"
+  ProductCode             : "CTR-P-O10B"
+  ContentType             : Application
+  Logo                    : Nintendo
+
+TitleInfo:
+  UniqueId                : 0xF010B
+  Category                : Application
+  Version                 : 1
+
+Option:
+  UseOnSD                 : true
+  FreeProductCode         : true
+  MediaRobotSkip          : true
+  EnableCompress          : true
+
+AccessControlInfo:
+  CoreVersion             : 2
+  SystemMode              : 64MB
+  IdealProcessor          : 0
+  AffinityMask            : 1
+  FileSystemAccess:
+   - DirectSdmc
+  ServiceAccess:
+   - APT:U
+   - hid:USER
+   - fs:USER
+   - gsp::Gpu
+   - ns:s
+
+SystemControlInfo:
+  SaveDataSize: 0KB
+  StackSize: 0x40000
