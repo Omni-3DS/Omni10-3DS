@@ -1,5 +1,6 @@
 /*
- * O10-Inst-Booter — only Install/Update (latest firm) + Boot
+ * O10-Inst-Booter — ONLY Install/Update (latest firm from GitHub) + Boot
+ * No flashcart / FTP / color / file browser in this binary.
  */
 #include <3ds.h>
 #include <stdio.h>
@@ -39,7 +40,6 @@ static void build_menu(App *app) {
 		return;
 	}
 	if (app->state != ST_HOME) return;
-	/* Only three actions */
 	add_btn(app, app->firmOk ? "Update Omni10" : "Install Omni10", ACT_INSTALL, STYLE_PRIMARY);
 	if (app->firmOk)
 		add_btn(app, "Boot Omni10", ACT_BOOT, STYLE_PRIMARY);
