@@ -1,18 +1,23 @@
-# ARM11 section (Omni10 FIRM)
+# Omni10 ARM11 core
 
-Goal: dual-processor FIRM — **ARM9** = FS/scripts/power, **ARM11** = screen/GPU assist.
+Loaded at **0x1FF80000** (AXI WRAM) via firmtool **XDMA**.
 
-| Item | Status |
-|------|--------|
-| Entry stub + link at `0x1FF80000` | Scaffold |
-| firmtool multi-section package | Next |
-| Shared ring buffer with ARM9 | Planned |
-| Framebuffer fill from ARM11 | Planned |
+## Shared memory (`0x1FF80E00`)
 
-Build (standalone ELF for now):
+| Field | Meaning |
+|-------|---------|
+| magic | `O10A` |
+| arm11_alive | 1 while loop runs |
+| cmd / arg0 / arg1 | ARM9 → ARM11 |
+| status | ARM11 response |
+| wifi_on / ftp_on | state |
 
-```bash
-arm-none-eabi-gcc -marm -march=armv6k -mtune=mpcore -nostdlib -T link.ld start.s main_arm11.c -o arm11.elf
-```
+Commands: PING, WIFI_STATUS, FTP_START/STOP/STATUS, SET_LED, GET_VERSION.
 
-Full FIRM will pass both ARM9.bin and ARM11.bin to `firmtool`.
+## Build
+
+Top-level `Makefile` builds `arm11.bin` and packs it into `Omni10.firm` with ARM9.
+
+## Limits
+
+Bare FIRM does **not** get Nintendo `soc:u` / NWM. ARM11 owns dual-core IPC and FTP/WiFi **state**; full TCP needs further kernel/homebrew work.
