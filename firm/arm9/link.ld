@@ -4,7 +4,8 @@ ENTRY(_start)
 
 MEMORY
 {
-    ram (rwx) : ORIGIN = 0x08000040, LENGTH = 96K - 0x40
+    /* ARM9 WRAM — allow larger FIRM payload (SDMMC+FAT32) */
+    ram (rwx) : ORIGIN = 0x08000040, LENGTH = 512K - 0x40
 }
 
 SECTIONS

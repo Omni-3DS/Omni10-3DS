@@ -12,7 +12,7 @@ if not main.is_file():
 t = main.read_text()
 
 EXTERN = r'''
-/* === real storage API (sdmmc.c / fat32.c) === */
+/* === real storage API (sdmmc.c / fat32.c) — always visible === */
 extern int sdmmc_init(void);
 extern int sdmmc_card_inserted(void);
 extern int sdmmc_is_sdhc(void);
@@ -23,18 +23,33 @@ extern int o10_backup_write(const unsigned char *payload, unsigned int len, unsi
 extern int o10_backup_read(unsigned char *payload, unsigned int max_len, unsigned int *out_len);
 '''
 
-if "o10_backup_write" not in t:
-    # place after version define if possible
-    if "#define OMNI_VERSION" in t:
-        t = re.sub(
-            r'(#define OMNI_VERSION[^\n]*\n)',
-            r"\1" + EXTERN + "\n",
-            t,
-            count=1,
-        )
+# Remove any previous injection stuck inside ifndef
+t = re.sub(
+    r"/\* === real storage API.*?\*/\n(?:extern [^;]+;\n)+",
+    "",
+    t,
+    count=1,
+    flags=re.S,
+)
+
+if "o10_backup_write" not in t or "real storage API" not in t:
+    # Prefer right after the OMNI_VERSION ifndef/endif block
+    m = re.search(
+        r"#ifndef OMNI_VERSION\n#define OMNI_VERSION \"[^\"]*\"\n#endif\n",
+        t,
+    )
+    if m:
+        t = t[: m.end()] + EXTERN + t[m.end() :]
+        print("injected storage externs after #endif OMNI_VERSION")
     else:
-        t = EXTERN + t
-    print("injected storage externs")
+        # fallback: after first includes block
+        m2 = re.search(r"#include <stdbool\.h>\n", t)
+        if m2:
+            t = t[: m2.end()] + EXTERN + t[m2.end() :]
+            print("injected storage externs after stdbool")
+        else:
+            t = EXTERN + t
+            print("injected storage externs at top")
 
 soft = re.compile(
     r"static void sdmmc_probe\(void\)\{\s*battery_probe\(\);\s*g_sd_ok = \(g_battery >= 0\) \? 1 : 0;\s*\}",
@@ -47,34 +62,12 @@ real_probe = r'''static void sdmmc_probe(void){
 if soft.search(t):
     t = soft.sub(real_probe, t, count=1)
     print("replaced soft sdmmc_probe")
-elif "sdmmc_card_inserted" in t and "g_sd_ok = (sdmmc_init" not in t:
-    t = t.replace(
-        "static void sdmmc_probe(void){\n        battery_probe();\n        g_sd_ok = (g_battery >= 0) ? 1 : 0;\n}",
-        real_probe,
-        1,
-    )
 
-# Real R4/DSTT backup: replace BACKUP OK stub body with o10_backup_write
-# Pattern from decode EXTRA — success screen after fake backup
-old_bak = "draw_text(left_x(L(\"BACKUP OK\",\"BACKUP OK\"),12),100,L(\"BACKUP OK\",\"BACKUP OK\"),80,255,120);"
-if old_bak in t and "o10_backup_write" in t:
-    repl = r'''{
-                                        unsigned char pay[64]; unsigned int lba=0; int br;
-                                        pay[0]='R';pay[1]='4';pay[2]='B';pay[3]='K';
-                                        for(br=4;br<64;br++)pay[br]=(unsigned char)br;
-                                        br = o10_backup_write(pay, 64, &lba);
-                                        if(br==0){
-                                                draw_text(left_x(L("BACKUP OK","BACKUP OK"),12),100,L("BACKUP OK","BACKUP OK"),80,255,120);
-                                        } else {
-                                                draw_text(left_x(L("BACKUP FAIL","BACKUP FEHLER"),12),100,L("BACKUP FAIL","BACKUP FEHLER"),255,80,80);
-                                        }
-                                }'''
-    # only first occurrence style — do both backup ok screens carefully
-    t = t.replace(
-        """clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();
+# Real R4/DSTT backup
+old = '''clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();
                                         draw_text(left_x(L("BACKUP OK","BACKUP OK"),12),100,L("BACKUP OK","BACKUP OK"),80,255,120);
-                                        draw_text(left_x(bpath,12),120,bpath,180,200,220);""",
-        """clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();
+                                        draw_text(left_x(bpath,12),120,bpath,180,200,220);'''
+new = '''clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();
                                         {unsigned char pay[64]; unsigned int lba=0; int br; int zi;
                                         pay[0]=(unsigned char)(is_r4?'R':'D');
                                         pay[1]=(unsigned char)(is_r4?'4':'S');
@@ -83,21 +76,25 @@ if old_bak in t and "o10_backup_write" in t:
                                         br=o10_backup_write(pay,64,&lba);
                                         if(br==0) draw_text(left_x(L("BACKUP OK","BACKUP OK"),12),100,L("BACKUP OK","BACKUP OK"),80,255,120);
                                         else draw_text(left_x(L("BACKUP FAIL","BACKUP FEHLER"),12),100,L("BACKUP FAIL","BACKUP FEHLER"),255,80,80);
-                                        draw_text(left_x(bpath,12),120,bpath,180,200,220);}""",
-        1,
-    )
-    print("wired real o10_backup_write into flashcart backup")
+                                        draw_text(left_x(bpath,12),120,bpath,180,200,220);}'''
+if old in t:
+    t = t.replace(old, new, 1)
+    print("wired real o10_backup_write")
 
-# Restore uses o10_backup_read
-t = t.replace(
-    """clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();
-                                        draw_text(left_x(L("RESTORE OK","RESTORE OK"),12),100,L("RESTORE OK","RESTORE OK"),80,255,120);""",
-    """clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();
+old_r = '''clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();
+                                        draw_text(left_x(L("RESTORE OK","RESTORE OK"),12),100,L("RESTORE OK","RESTORE OK"),80,255,120);'''
+new_r = '''clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();
                                         {unsigned char pay[64]; unsigned int ln=0; int rr=o10_backup_read(pay,64,&ln);
                                         if(rr==0) draw_text(left_x(L("RESTORE OK","RESTORE OK"),12),100,L("RESTORE OK","RESTORE OK"),80,255,120);
-                                        else draw_text(left_x(L("RESTORE FAIL","RESTORE FEHLER"),12),100,L("RESTORE FAIL","RESTORE FEHLER"),255,80,80);}""",
-    1,
-)
+                                        else draw_text(left_x(L("RESTORE FAIL","RESTORE FEHLER"),12),100,L("RESTORE FAIL","RESTORE FEHLER"),255,80,80);}'''
+if old_r in t:
+    t = t.replace(old_r, new_r, 1)
+    print("wired real o10_backup_read")
 
 main.write_text(t)
 print("patched", main, "bytes", len(t))
+# sanity: externs must not sit only inside ifndef
+if re.search(r"#ifndef OMNI_VERSION\n#define OMNI_VERSION[^\n]+\n/\* === real storage", t):
+    print("ERROR: externs still inside ifndef")
+    sys.exit(1)
+print("extern placement OK")
