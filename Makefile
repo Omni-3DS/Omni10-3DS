@@ -29,7 +29,7 @@ A9_CFLAGS  := -Wall -O2 -marm -fomit-frame-pointer -nostdlib -march=armv5te \
               -fno-builtin-strncmp -ffreestanding -I$(A9_DIR) \
               -DOMNI_VERSION=\"$(OMNI_VER)\"
 A11_CFLAGS := -Wall -O2 -marm -fomit-frame-pointer -nostdlib -march=armv6k \
-              -mtune=mpcore -mfloat-abi-soft -ffreestanding \
+              -mtune=mpcore -mfloat-abi=soft -ffreestanding \
               -fno-builtin-memset -fno-builtin-memcpy \
               -DOMNI_VERSION=\"$(OMNI_VER)\"
 ASFLAGS9  := -marm -march=armv5te
