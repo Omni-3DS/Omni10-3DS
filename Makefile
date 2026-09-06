@@ -44,6 +44,7 @@ ensure-main:
 	  echo "ERROR: missing scripts/firm_main_*.zlib.b64"; exit 1; \
 	fi
 	python3 scripts/decode_firm_main.py
+	python3 scripts/patch_sd_real.py
 	@grep -q 'screen_scripts_hub' $(A9_SRC)
 	@grep -q 'HOME SCRIPTS' $(A9_SRC)
 	@echo "FIRM version = $(OMNI_VER)"
