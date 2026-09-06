@@ -1,0 +1,1 @@
+Omni10 FIRM v0.9.1 includes ARM9 UI + ARM11 SHM core (0x1FF80000).
