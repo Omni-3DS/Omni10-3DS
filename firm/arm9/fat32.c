@@ -1,6 +1,7 @@
 /*
  * Omni10 minimal FAT32 — real BPB parse, root dir list, cluster read,
  * and O10BK1 backup in the last 2048 sectors of the volume.
+ * No libgcc: avoid software division (__aeabi_uidiv).
  */
 #include "fat32.h"
 
@@ -37,6 +38,30 @@ static void wr32(u8 *p, u32 v)
     p[3] = (u8)(v >> 24);
 }
 
+/* Tiny unsigned divide — no libgcc */
+static u32 udiv(u32 n, u32 d)
+{
+    u32 q = 0, r = 0;
+    int i;
+    if (d == 0)
+        return 0;
+    if (d == 512)
+        return n >> 9;
+    if (d == 256)
+        return n >> 8;
+    if (d == 32)
+        return n >> 5;
+    for (i = 31; i >= 0; i--) {
+        r <<= 1;
+        r |= (n >> i) & 1u;
+        if (r >= d) {
+            r -= d;
+            q |= (1u << i);
+        }
+    }
+    return q;
+}
+
 static int read_sec(u32 lba, u8 *buf)
 {
     return sdmmc_readsectors(lba, 1, buf);
@@ -50,9 +75,10 @@ static int write_sec(u32 lba, const u8 *buf)
 int fat32_mount(fat32_fs_t *fs)
 {
     u8 sec[512];
-    u32 root_ents, fatsz16, tot16, tot32, fatsz32, hid;
+    u32 root_ents, fatsz16, tot16, tot32, fatsz32;
     u8 part_type;
     u32 part_lba = 0;
+    u32 root_dir_secs;
 
     mem_clr(fs, sizeof(*fs));
     if (sdmmc_init() != 0)
@@ -60,7 +86,6 @@ int fat32_mount(fat32_fs_t *fs)
     if (read_sec(0, sec) != 0)
         return -2;
 
-    /* MBR? */
     if (sec[510] == 0x55 && sec[511] == 0xAA) {
         part_type = sec[0x1BE + 4];
         part_lba = rd32(&sec[0x1BE + 8]);
@@ -68,14 +93,13 @@ int fat32_mount(fat32_fs_t *fs)
             if (read_sec(part_lba, sec) != 0)
                 return -3;
         } else {
-            part_lba = 0; /* may already be VBR */
+            part_lba = 0;
         }
     }
 
-    if (rd16(&sec[11]) != 512 && rd16(&sec[11]) != 0)
-        fs->bytes_per_sec = rd16(&sec[11]);
-    else
-        fs->bytes_per_sec = 512;
+    fs->bytes_per_sec = rd16(&sec[11]);
+    if (fs->bytes_per_sec != 512)
+        fs->bytes_per_sec = 512; /* only 512 supported without div complexity */
 
     fs->sec_per_clus = sec[13];
     if (fs->sec_per_clus == 0)
@@ -88,8 +112,6 @@ int fat32_mount(fat32_fs_t *fs)
     tot32 = rd32(&sec[32]);
     fatsz32 = rd32(&sec[36]);
     fs->root_clus = rd32(&sec[44]);
-    hid = rd32(&sec[28]);
-    (void)hid;
 
     fs->fat_sz = fatsz16 ? fatsz16 : fatsz32;
     fs->total_sec = tot16 ? tot16 : tot32;
@@ -97,14 +119,14 @@ int fat32_mount(fat32_fs_t *fs)
         return -5;
 
     fs->fat_begin = part_lba + fs->reserved_sec;
-    {
-        u32 root_dir_secs = ((root_ents * 32) + (fs->bytes_per_sec - 1)) / fs->bytes_per_sec;
-        fs->first_data_sec = fs->fat_begin + (fs->num_fats * fs->fat_sz) + root_dir_secs;
-    }
+    /* root_dir_secs = ceil(root_ents * 32 / 512) */
+    root_dir_secs = (root_ents * 32 + 511) >> 9;
+    fs->first_data_sec = fs->fat_begin + (fs->num_fats * fs->fat_sz) + root_dir_secs;
     if (fs->root_clus < 2)
         fs->root_clus = 2;
 
     fs->mounted = 1;
+    (void)udiv; /* keep helper available */
     return 0;
 }
 
@@ -117,8 +139,8 @@ static u32 fat_next(fat32_fs_t *fs, u32 clus)
 {
     u8 sec[512];
     u32 off = clus * 4;
-    u32 lba = fs->fat_begin + (off / 512);
-    u32 idx = off % 512;
+    u32 lba = fs->fat_begin + (off >> 9);
+    u32 idx = off & 511u;
     if (read_sec(lba, sec) != 0)
         return 0x0FFFFFFFu;
     return rd32(&sec[idx]) & 0x0FFFFFFFu;
@@ -156,8 +178,8 @@ int fat32_list_root(fat32_fs_t *fs, fat32_entry_t *out, int max_out)
                 if (de[0] == 0x00)
                     return n;
                 if (de[0] == 0xE5 || (de[11] & 0x08))
-                    continue; /* free or volume label */
-                if (de[11] & 0x0F) /* LFN skip */
+                    continue;
+                if (de[11] & 0x0F)
                     continue;
                 name83(de, out[n].name);
                 out[n].attr = de[11];
@@ -197,7 +219,6 @@ int fat32_read_file(fat32_fs_t *fs, u32 start_clus, u32 size, u8 *buf, u32 buf_m
     return (int)got;
 }
 
-#define O10_BK_MAGIC 0x314B4230u /* 'O10B' little mixed — store ASCII O10BK1 */
 #define O10_TAIL_SECS 2048u
 
 int o10_backup_write(const u8 *payload, u32 len, u32 *out_lba)
@@ -212,7 +233,6 @@ int o10_backup_write(const u8 *payload, u32 len, u32 *out_lba)
         return -2;
 
     base = fs.total_sec - O10_TAIL_SECS;
-    /* sector 0 of region: header */
     mem_clr(sec, 512);
     sec[0] = 'O';
     sec[1] = '1';
@@ -225,18 +245,17 @@ int o10_backup_write(const u8 *payload, u32 len, u32 *out_lba)
     if (write_sec(base, sec) != 0)
         return -3;
 
-    need = (len + 511) / 512;
+    need = (len + 511) >> 9;
     if (need > O10_TAIL_SECS - 1)
         need = O10_TAIL_SECS - 1;
 
     for (i = 0; i < need; i++) {
+        u32 off = i << 9;
+        u32 chunk;
         mem_clr(sec, 512);
-        {
-            u32 off = i * 512;
-            u32 chunk = (len - off) > 512 ? 512 : (len - off);
-            if (off < len)
-                mem_cpy(sec, payload + off, chunk);
-        }
+        chunk = (len - off) > 512 ? 512 : (len - off);
+        if (off < len)
+            mem_cpy(sec, payload + off, chunk);
         if (write_sec(base + 1 + i, sec) != 0)
             return -4;
     }
@@ -263,9 +282,9 @@ int o10_backup_read(u8 *payload, u32 max_len, u32 *out_len)
     len = rd32(&sec[8]);
     if (len > max_len)
         len = max_len;
-    need = (len + 511) / 512;
+    need = (len + 511) >> 9;
     for (i = 0; i < need; i++) {
-        u32 off = i * 512;
+        u32 off = i << 9;
         u32 chunk = (len - off) > 512 ? 512 : (len - off);
         if (read_sec(base + 1 + i, sec) != 0)
             return -5;
