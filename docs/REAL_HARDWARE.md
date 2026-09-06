@@ -1,23 +1,23 @@
-# Omni10 — what is REAL hardware (v1.0.0+)
+# Real hardware map (v1.1.0)
 
-## Real (this tree)
+## SDMMC (`firm/arm9/sdmmc.c`)
 
-| Component | Implementation |
-|-----------|----------------|
-| **SDMMC/TMIO** | `firm/arm9/sdmmc.c` — registers `0x10006000`, CMD0/8/55/ACMD41, CID/RCA/select, **sector read/write** |
-| **Card detect** | `EMMC_STATUS0` bit `SIGSTATE` |
-| **MBR read** | `fat_min.c` → sector 0 via real read |
-| **MCU battery / LED** | I2C MCU regs (existing ARM9) |
-| **ARM11 core** | Second FIRM section + SHM mailbox |
+- Base `0x10006000` TMIO
+- Init: CMD0, CMD8, ACMD41, CID, RCA, select, blocklen 512
+- `sdmmc_readsectors` / `sdmmc_writesectors`
 
-## Not magic / still limited
+## FAT32 (`firm/arm9/fat32.c`)
 
-| Component | Why |
-|-----------|-----|
-| Full FAT32 path names `o10/r4/backup.bin` | Needs full FAT cluster chain; sector R/W is the foundation |
-| Nintendo WiFi NWM + TCP FTP | Not present in bare FIRM; needs NWM firmware/services |
-| R4/DSTT cart dump bus | Separate SPI/cart protocol on top of SD backup targets |
+- MBR partition or superfloppy VBR
+- BPB parse, root cluster walk, 8.3 list, cluster chain read
+- **O10BK1** backup: last 2048 sectors of the volume (header + payload)
 
-## Goal
+## R4 / DSTT
 
-No more “BACKUP OK” without `sdmmc_writesectors`. UI that claims SD must call `sdmmc_init` / `sdmmc_readsectors`.
+UI flow remains; **BACKUP/RESTORE** call `o10_backup_write` / `o10_backup_read` (real SD I/O).
+
+Cart bus dump is a separate layer still expanding.
+
+## WiFi / FTP
+
+MCU flag + ARM11 SHM state = real IPC. Nintendo TCP stack is not part of this FIRM binary.

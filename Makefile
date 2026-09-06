@@ -8,6 +8,7 @@ A9_START := $(A9_DIR)/start.s
 A9_SRC   := $(A9_DIR)/main.c
 A9_SD    := $(A9_DIR)/sdmmc.c
 A9_FAT   := $(A9_DIR)/fat_min.c
+A9_FAT32 := $(A9_DIR)/fat32.c
 A9_LD    := $(A9_DIR)/link.ld
 A11_START := $(A11_DIR)/start.s
 A11_SRC   := $(A11_DIR)/main_arm11.c
@@ -22,7 +23,7 @@ TARGET  := Omni10.firm
 A9_ENTRY  := 0x08000040
 A11_ENTRY := 0x1FF80000
 
-OMNI_VER := $(shell tr -d ' \t\r\n' < version.dat 2>/dev/null || echo 1.0.0)
+OMNI_VER := $(shell tr -d ' \t\r\n' < version.dat 2>/dev/null || echo 1.1.0)
 
 A9_CFLAGS  := -Wall -O2 -marm -fomit-frame-pointer -nostdlib -march=armv5te \
               -fno-builtin-memset -fno-builtin-memcpy -fno-builtin-strlen \
@@ -54,11 +55,11 @@ firm: ensure-main $(TARGET)
 arm9: $(A9_BIN)
 arm11: $(A11_BIN)
 
-$(A9_BIN): $(A9_START) $(A9_SRC) $(A9_SD) $(A9_FAT) $(A9_LD) version.dat
-	@echo "=== ARM9 v$(OMNI_VER) REAL SDMMC ==="
+$(A9_BIN): $(A9_START) $(A9_SRC) $(A9_SD) $(A9_FAT) $(A9_FAT32) $(A9_LD) version.dat
+	@echo "=== ARM9 v$(OMNI_VER) SDMMC+FAT32 ==="
 	@$(RM) $(A9_ELF) $(A9_BIN)
 	$(CC) $(A9_CFLAGS) $(ASFLAGS9) -T $(A9_LD) -nostdlib -Wl,--nmagic \
-		$(A9_START) $(A9_SRC) $(A9_SD) $(A9_FAT) -o $(A9_ELF)
+		$(A9_START) $(A9_SRC) $(A9_SD) $(A9_FAT) $(A9_FAT32) -o $(A9_ELF)
 	$(OBJCOPY) -O binary $(A9_ELF) $(A9_BIN)
 	@wc -c $(A9_BIN)
 

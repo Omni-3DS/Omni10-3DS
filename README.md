@@ -1,38 +1,41 @@
 # Omni10-3DS
 
-**Full Access. No Limits.** Custom 3DS FIRM + installer — built to go beyond classic payloads (see [docs/VS_GM9.md](docs/VS_GM9.md)).
+Custom **Nintendo 3DS FIRM** (ARM9 + ARM11). Not GodMode9 — own codebase.
 
-## Components
+## Status (v1.1.0)
 
-| Piece | Role |
-|-------|------|
-| **Omni10.firm** | Luma payload (ARM9, ARM11 scaffold) |
-| **O10-Inst-Booter** | CIA/3dsx installer · updater · booter + banner **sound** |
-| **o10script** | On-console `.slr` → opaque `.o10` |
-| **Lua** | Planned second runner |
-| **Assets** | `scripts/gen_assets.py` → icon / banner / splash / wav |
-
-## Install firm
-
-1. Release artifact `Omni10.firm` → `sdmc:/luma/payloads/Omni10.firm`
-2. Or use **O10-Inst-Booter** → Install → **Boot** (hold **START** → Luma → Omni10)
+| Layer | Real? |
+|-------|-------|
+| Dual-core FIRM (ARM9 NDMA + ARM11 XDMA) | Yes |
+| TMIO SDMMC sector R/W (`0x10006000`) | Yes |
+| FAT32 mount + root list + file read | Yes |
+| O10BK1 backup region (tail of volume) | Yes |
+| MCU battery / notification LED | Yes |
+| R4/DSTT UI flow + real SD backup/restore | Yes |
+| `.o10` / mini Lua runners | Yes |
+| Full NWM WiFi + TCP FTP sockets | Not in bare FIRM |
 
 ## Build
 
 ```bash
-make firm
-python3 scripts/gen_assets.py
-make -C installer          # 3dsx
-# make -f installer/Makefile.cia cia   # needs bannertool + makerom
+# needs devkitARM + firmtool
+make
+# -> Omni10.firm
 ```
 
-CI: `version.dat` → automatic GitHub Release.
+Boot via Luma chainloader.
+
+## SD layout
+
+- `o10/scripts`, `o10/slr`, `o10/lua` (paths for future FAT create)
+- Hardware backup: last **2048 sectors** of the FAT volume, magic `O10BK1`
 
 ## Docs
 
-- [FEATURES](docs/FEATURES.md) · [FIRM FS/FTP](docs/FIRM_FS_FTP.md) · [CIA](docs/CIA_COMPLETE.md)
-- [o10 / Lua / assets](docs/O10_LUA_ASSETS.md) · [ARM11](firm/arm11/README.md)
+- `docs/REAL_HARDWARE.md`
+- `docs/ARM11.md`
+- `docs/FLASHCART_WARN.md`
 
 ## License
 
-GPL-3.0
+GPL-3.0 (see repo).
