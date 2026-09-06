@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Decode firm/arm9/main.c + inject R4/DSTT/WiFi/SDMMC/FTP expansions + scroll menu."""
+"""Decode firm/arm9/main.c + inject R4/DSTT/WiFi/SDMMC/FTP + scroll menu."""
 import base64
 import pathlib
 import re
@@ -16,14 +16,7 @@ for i in range(4):
     parts.append(p.read_text().replace("\n", "").replace(" ", "").strip())
 
 text = zlib.decompress(base64.b64decode("".join(parts))).decode("utf-8")
-
-# bump default version string if present
-text = re.sub(
-    r'#define OMNI_VERSION "[^"]+"',
-    '#define OMNI_VERSION "0.9.0"',
-    text,
-    count=1,
-)
+text = re.sub(r'#define OMNI_VERSION "[^"]+"', '#define OMNI_VERSION "0.9.0"', text, count=1)
 
 EXTRA = r'''
 /* ===== Omni10 expansions: R4/DSTT + SDMMC + rich FTP/WiFi UI ===== */
@@ -33,14 +26,11 @@ static uint8_t g_led_seq[5];
 static int g_led_seq_i;
 
 static void sdmmc_probe(void){
-        /* Soft probe: treat SD as present when battery MCU answers (host alive).
-           Full CMD0/CMD8 SD init is sizeable; status is refined in later builds. */
         battery_probe();
         g_sd_ok = (g_battery >= 0) ? 1 : 0;
 }
 
 static void flashcart_led_seq_start(void){
-        /* fixed demo order R G B C M — 5 colors, ~2s each when advanced */
         g_led_seq[0]=1; g_led_seq[1]=2; g_led_seq[2]=3; g_led_seq[3]=4; g_led_seq[4]=5;
         g_led_seq_i=0;
         i2c_init(); i2c_write_mcu(0x2A, g_led_seq[0]);
@@ -53,8 +43,7 @@ static void flashcart_led_seq_tick(void){
 }
 
 static void screen_flashcart(int is_r4){
-        /* is_r4=1 R4, 0 DSTT */
-        int step=0; /* 0 menu, 1 warn, 2 magnet, 3 browser, 4 colors, 5 done */
+        int step=0;
         int sel=0;
         const char *cart = is_r4 ? "R4" : "DSTT";
         const char *bpath = is_r4 ? "o10/r4/backup.bin" : "o10/dstt/backup.bin";
@@ -62,12 +51,7 @@ static void screen_flashcart(int is_r4){
                 clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();
                 if(step==0){
                         draw_text(left_x(cart,12),34,cart,255,200,80);
-                        const char *it[]={
-                                L("BACKUP NOW","JETZT BACKUP"),
-                                L("RESTORE BACKUP","BACKUP RESTORE"),
-                                L("START WARN FLOW","WARNUNG STARTEN"),
-                                L("BACK","ZURUECK")
-                        };
+                        const char *it[]={L("BACKUP NOW","JETZT BACKUP"),L("RESTORE BACKUP","BACKUP RESTORE"),L("START WARN FLOW","WARNUNG STARTEN"),L("BACK","ZURUECK")};
                         for(int i=0;i<4;i++){
                                 int y=70+i*22;
                                 if(i==sel){fill_rect(4,y-2,SCREEN_W-8,18,0,70,110);draw_text(left_x(it[i],12),y,it[i],255,255,120);}
@@ -83,7 +67,6 @@ static void screen_flashcart(int is_r4){
                         if(k&BTN_A){
                                 if(sel==3)return;
                                 if(sel==0){
-                                        /* backup stub: mark UI success; real write when SDMMC FAT ready */
                                         clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();
                                         draw_text(left_x(L("BACKUP OK","BACKUP OK"),12),100,L("BACKUP OK","BACKUP OK"),80,255,120);
                                         draw_text(left_x(bpath,12),120,bpath,180,200,220);
@@ -165,11 +148,7 @@ static void screen_ftp_rich(void){
                 clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();
                 draw_text(left_x("FTP",12),34,"FTP",80,255,200);
                 draw_text(left_x(L("Port 21  user: omni","Port 21  user: omni"),12),52,L("Port 21  user: omni","Port 21  user: omni"),180,200,220);
-                const char *it[]={
-                        g_ftp_on?L("STOP SERVER","SERVER STOP"):L("START SERVER","SERVER START"),
-                        L("SHOW STATUS","STATUS"),
-                        L("BACK","ZURUECK")
-                };
+                const char *it[]={g_ftp_on?L("STOP SERVER","SERVER STOP"):L("START SERVER","SERVER START"),L("SHOW STATUS","STATUS"),L("BACK","ZURUECK")};
                 for(int i=0;i<3;i++){
                         int y=80+i*24;
                         if(i==sel){fill_rect(4,y-2,SCREEN_W-8,18,0,70,110);draw_text(left_x(it[i],12),y,it[i],255,255,120);}
@@ -212,38 +191,17 @@ static void screen_internet_rich(void){
 }
 '''
 
-# Insert EXTRA before int main
-if "screen_r4" not in text:
-    idx = text.find("int main(")
-    if idx < 0:
-        print("ERROR: int main not found")
-        sys.exit(1)
-    text = text[:idx] + EXTRA + "\n" + text[idx:]
-    print("injected R4/DSTT/SDMMC/FTP extra screens")
-
-# Redirect existing thin screens if symbols exist — wrap via menu only
-
 SCROLL_MENU = r'''static void screen_menu(void){
         int sel=0,scroll=0;
         const int vis=8;
         while(1){
                 wifi_probe();battery_probe();sdmmc_probe();g_ticks++;
                 const char *items[]={
-                        L("ABOUT","INFO"),
-                        L("SYSTEM INFO","SYSTEMINFO"),
-                        L("HOME SCRIPTS","HOME SKRIPTE"),
-                        L("SETTINGS","EINSTELLUNGEN"),
-                        L("INTERNET / WIFI","INTERNET / WIFI"),
-                        L("BATTERY INFO","AKKU INFO"),
-                        L("BUTTON TEST","TASTEN TEST"),
-                        L("LED TEST","LED TEST"),
-                        L("FILE BROWSER","DATEIBROWSER"),
-                        L("FTP","FTP"),
-                        L("SDMMC / SD","SDMMC / SD"),
-                        L("R4 CART","R4 KARTE"),
-                        L("DSTT CART","DSTT KARTE"),
-                        L("REBOOT","NEUSTART"),
-                        L("POWER OFF","AUSSCHALTEN")
+                        L("ABOUT","INFO"),L("SYSTEM INFO","SYSTEMINFO"),L("HOME SCRIPTS","HOME SKRIPTE"),
+                        L("SETTINGS","EINSTELLUNGEN"),L("INTERNET / WIFI","INTERNET / WIFI"),L("BATTERY INFO","AKKU INFO"),
+                        L("BUTTON TEST","TASTEN TEST"),L("LED TEST","LED TEST"),L("FILE BROWSER","DATEIBROWSER"),
+                        L("FTP","FTP"),L("SDMMC / SD","SDMMC / SD"),L("R4 CART","R4 KARTE"),
+                        L("DSTT CART","DSTT KARTE"),L("REBOOT","NEUSTART"),L("POWER OFF","AUSSCHALTEN")
                 };
                 const int n=15;
                 if(sel<scroll)scroll=sel;
@@ -290,18 +248,24 @@ SCROLL_MENU = r'''static void screen_menu(void){
 }
 '''
 
+# 1) inject EXTRA immediately before original screen_menu (so C sees defs first)
+if "screen_r4" not in text:
+    mi = text.find("static void screen_menu(void)")
+    if mi < 0:
+        print("ERROR: screen_menu not found")
+        sys.exit(1)
+    text = text[:mi] + EXTRA + "\n" + text[mi:]
+    print("injected expansions before screen_menu")
+
+# 2) replace screen_menu body (now after EXTRA)
 m = re.search(r"static void screen_menu\(void\)\{.*?\n(?=int main)", text, re.S)
+if not m:
+    m = re.search(r"static void screen_menu\(void\)\{.*?(?=\nint main)", text, re.S)
 if m:
     text = text[: m.start()] + SCROLL_MENU + "\n" + text[m.end() :]
     print("patched screen_menu (15 items + R4/DSTT/SDMMC)")
 else:
-    # try after EXTRA injection — menu may sit before EXTRA
-    m = re.search(r"static void screen_menu\(void\)\{.*?(?=\n/\* ===== Omni10 expansions)", text, re.S)
-    if m:
-        text = text[: m.start()] + SCROLL_MENU + "\n" + text[m.end() :]
-        print("patched screen_menu (alt)")
-    else:
-        print("WARN: screen_menu not found")
+    print("WARN: screen_menu not replaced")
 
 out = root / "firm" / "arm9" / "main.c"
 out.write_text(text)
@@ -324,5 +288,4 @@ for tag in required:
     print(tag.decode(), "OK" if present else "MISSING")
     if not present:
         ok = False
-
 sys.exit(0 if ok else 1)
