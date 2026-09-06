@@ -16,12 +16,12 @@ for i in range(4):
     parts.append(p.read_text().replace("\n", "").replace(" ", "").strip())
 
 text = zlib.decompress(base64.b64decode("".join(parts))).decode("utf-8")
-text = re.sub(r'#define OMNI_VERSION "[^"]+"', '#define OMNI_VERSION "0.9.0"', text, count=1)
+text = re.sub(r'#define OMNI_VERSION "[^"]+"', '#define OMNI_VERSION "0.9.2"', text, count=1)
 
+# Reuse existing g_ftp_on from base — do NOT redefine it.
 EXTRA = r'''
 /* ===== Omni10 expansions: R4/DSTT + SDMMC + rich FTP/WiFi UI ===== */
 static int g_sd_ok = -1;
-static int g_ftp_on = 0;
 static uint8_t g_led_seq[5];
 static int g_led_seq_i;
 
@@ -184,9 +184,26 @@ static void screen_internet_rich(void){
                 draw_text(left_x(L("SOURCE: MCU I2C","QUELLE: MCU I2C"),12),95,L("SOURCE: MCU I2C","QUELLE: MCU I2C"),120,140,160);
                 draw_text(left_x(L("Scan/SSID: ARM11","Scan/SSID: ARM11"),12),115,L("Scan/SSID: ARM11","Scan/SSID: ARM11"),255,180,80);
                 draw_text(left_x(L("TCP/FTP: ARM11 soc","TCP/FTP: ARM11 soc"),12),135,L("TCP/FTP: ARM11 soc","TCP/FTP: ARM11 soc"),255,180,80);
+                draw_text(left_x(L("Y = language EN/DE","Y = Sprache EN/DE"),12),155,L("Y = language EN/DE","Y = Sprache EN/DE"),160,200,255);
                 draw_text(left_x(L("B BACK","B ZURUECK"),12),180,L("B BACK","B ZURUECK"),160,180,200);
                 draw_bot_help(L("MCU flag live","MCU Flag live"),L("Full stack dual-core","Voller Stack Dual-Core"));
-                drain();if(wait_key()&BTN_B)return;
+                drain();uint32_t k=wait_key();
+                if(k&BTN_B)return;
+                if(k&BTN_Y)g_lang = g_lang ? 0 : 1;
+        }
+}
+
+static void screen_language(void){
+        while(1){
+                clear_top(COL_BG_R,COL_BG_G,COL_BG_B);draw_header();
+                draw_text(left_x(L("LANGUAGE","SPRACHE"),12),40,L("LANGUAGE","SPRACHE"),80,220,255);
+                draw_text(left_x(g_lang?"Deutsch":"English",12),80,g_lang?"Deutsch":"English",255,255,120);
+                draw_text(left_x(L("A or Y toggle","A oder Y wechseln"),12),120,L("A or Y toggle","A oder Y wechseln"),200,200,220);
+                draw_text(left_x(L("B BACK","B ZURUECK"),12),160,L("B BACK","B ZURUECK"),160,180,200);
+                draw_bot_help(L("EN <-> DE","EN <-> DE"),L("Applies immediately","Sofort aktiv"));
+                drain();uint32_t k=wait_key();
+                if(k&BTN_B)return;
+                if(k&(BTN_A|BTN_Y))g_lang = g_lang ? 0 : 1;
         }
 }
 '''
@@ -198,12 +215,13 @@ SCROLL_MENU = r'''static void screen_menu(void){
                 wifi_probe();battery_probe();sdmmc_probe();g_ticks++;
                 const char *items[]={
                         L("ABOUT","INFO"),L("SYSTEM INFO","SYSTEMINFO"),L("HOME SCRIPTS","HOME SKRIPTE"),
-                        L("SETTINGS","EINSTELLUNGEN"),L("INTERNET / WIFI","INTERNET / WIFI"),L("BATTERY INFO","AKKU INFO"),
-                        L("BUTTON TEST","TASTEN TEST"),L("LED TEST","LED TEST"),L("FILE BROWSER","DATEIBROWSER"),
-                        L("FTP","FTP"),L("SDMMC / SD","SDMMC / SD"),L("R4 CART","R4 KARTE"),
-                        L("DSTT CART","DSTT KARTE"),L("REBOOT","NEUSTART"),L("POWER OFF","AUSSCHALTEN")
+                        L("SETTINGS","EINSTELLUNGEN"),L("LANGUAGE","SPRACHE"),L("INTERNET / WIFI","INTERNET / WIFI"),
+                        L("BATTERY INFO","AKKU INFO"),L("BUTTON TEST","TASTEN TEST"),L("LED TEST","LED TEST"),
+                        L("FILE BROWSER","DATEIBROWSER"),L("FTP","FTP"),L("SDMMC / SD","SDMMC / SD"),
+                        L("R4 CART","R4 KARTE"),L("DSTT CART","DSTT KARTE"),L("REBOOT","NEUSTART"),
+                        L("POWER OFF","AUSSCHALTEN")
                 };
-                const int n=15;
+                const int n=16;
                 if(sel<scroll)scroll=sel;
                 if(sel>=scroll+vis)scroll=sel-vis+1;
                 if(scroll<0)scroll=0;
@@ -218,11 +236,12 @@ SCROLL_MENU = r'''static void screen_menu(void){
                         if(i==sel){fill_rect(4,y-2,SCREEN_W-8,15,0,70,110);draw_text(left_x(items[i],16),y,items[i],255,255,120);}
                         else draw_text(left_x(items[i],16),y,items[i],190,195,210);
                 }
-                draw_footer(L("A SELECT | X SCRIPTS | START+SELECT OFF","A | X SKRIPTE | START+SELECT AUS"));
-                draw_bot_help(L("UP/DOWN scroll  X = scripts","HOCH/RUNTER scrollen  X = Skripte"),L("A select","A waehlen"));
+                draw_footer(L("A|X SCRIPTS|Y LANG|START+SELECT OFF","A|X SKRIPTE|Y SPRACHE|START+SELECT AUS"));
+                draw_bot_help(L("UP/DOWN scroll  Y = language","HOCH/RUNTER  Y = Sprache"),L("A select","A waehlen"));
                 drain();
                 uint32_t k=wait_key();
                 if(k&BTN_X){screen_scripts_hub();continue;}
+                if(k&BTN_Y){g_lang = g_lang ? 0 : 1;continue;}
                 if(k&BTN_UP){sel--;if(sel<0)sel=n-1;}
                 if(k&BTN_DOWN){sel++;if(sel>=n)sel=0;}
                 if(k&BTN_A){
@@ -231,24 +250,24 @@ SCROLL_MENU = r'''static void screen_menu(void){
                         case 1:screen_sysinfo();break;
                         case 2:screen_scripts_hub();break;
                         case 3:screen_settings();break;
-                        case 4:screen_internet_rich();break;
-                        case 5:screen_battery();break;
-                        case 6:screen_buttons();break;
-                        case 7:screen_led();break;
-                        case 8:screen_filebrowser();break;
-                        case 9:screen_ftp_rich();break;
-                        case 10:screen_sdmmc();break;
-                        case 11:screen_r4();break;
-                        case 12:screen_dstt();break;
-                        case 13:if(confirm(L("REBOOT?","NEUSTART?"),L("Restart the console","Konsole neu starten")))reboot();break;
-                        case 14:if(confirm(L("POWER OFF?","AUSSCHALTEN?"),L("Turn console off","Konsole ausschalten")))power_off();break;
+                        case 4:screen_language();break;
+                        case 5:screen_internet_rich();break;
+                        case 6:screen_battery();break;
+                        case 7:screen_buttons();break;
+                        case 8:screen_led();break;
+                        case 9:screen_filebrowser();break;
+                        case 10:screen_ftp_rich();break;
+                        case 11:screen_sdmmc();break;
+                        case 12:screen_r4();break;
+                        case 13:screen_dstt();break;
+                        case 14:if(confirm(L("REBOOT?","NEUSTART?"),L("Restart the console","Konsole neu starten")))reboot();break;
+                        case 15:if(confirm(L("POWER OFF?","AUSSCHALTEN?"),L("Turn console off","Konsole ausschalten")))power_off();break;
                         }
                 }
         }
 }
 '''
 
-# 1) inject EXTRA immediately before original screen_menu (so C sees defs first)
 if "screen_r4" not in text:
     mi = text.find("static void screen_menu(void)")
     if mi < 0:
@@ -257,13 +276,12 @@ if "screen_r4" not in text:
     text = text[:mi] + EXTRA + "\n" + text[mi:]
     print("injected expansions before screen_menu")
 
-# 2) replace screen_menu body (now after EXTRA)
 m = re.search(r"static void screen_menu\(void\)\{.*?\n(?=int main)", text, re.S)
 if not m:
     m = re.search(r"static void screen_menu\(void\)\{.*?(?=\nint main)", text, re.S)
 if m:
     text = text[: m.start()] + SCROLL_MENU + "\n" + text[m.end() :]
-    print("patched screen_menu (15 items + R4/DSTT/SDMMC)")
+    print("patched screen_menu (16 items + lang + R4/DSTT)")
 else:
     print("WARN: screen_menu not replaced")
 
@@ -280,6 +298,7 @@ required = (
     b"screen_dstt",
     b"screen_sdmmc",
     b"screen_ftp_rich",
+    b"screen_language",
     b"vis=8",
 )
 ok = True
@@ -288,4 +307,10 @@ for tag in required:
     print(tag.decode(), "OK" if present else "MISSING")
     if not present:
         ok = False
+# ensure no double g_ftp_on definition from EXTRA
+if text.count("static int g_ftp_on") > 1:
+    print("g_ftp_on redefinition STILL PRESENT")
+    ok = False
+else:
+    print("g_ftp_on single OK")
 sys.exit(0 if ok else 1)
