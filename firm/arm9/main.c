@@ -1,6 +1,6 @@
 /* version from Makefile -DOMNI_VERSION if set */
 #ifndef OMNI_VERSION
-#define OMNI_VERSION "0.8.6"
+#define OMNI_VERSION "0.9.0"
 #endif
 /* Omni10-3DS v0.8.2 - X-flip orient + left + net */
 #include <stdint.h>
@@ -317,9 +317,25 @@ static void screen_menu(void){
         int sel=0,scroll=0;
         const int vis=8;
         while(1){
-                wifi_probe();battery_probe();g_ticks++;
-                const char *items[]={L("ABOUT","INFO"),L("SYSTEM INFO","SYSTEMINFO"),L("HOME SCRIPTS","HOME SKRIPTE"),L("SETTINGS","EINSTELLUNGEN"),L("INTERNET / WIFI","INTERNET / WIFI"),L("BATTERY INFO","AKKU INFO"),L("BUTTON TEST","TASTEN TEST"),L("LED TEST","LED TEST"),L("FILE BROWSER","DATEIBROWSER"),L("FTP","FTP"),L("REBOOT","NEUSTART"),L("POWER OFF","AUSSCHALTEN")};
-                const int n=12;
+                wifi_probe();battery_probe();sdmmc_probe();g_ticks++;
+                const char *items[]={
+                        L("ABOUT","INFO"),
+                        L("SYSTEM INFO","SYSTEMINFO"),
+                        L("HOME SCRIPTS","HOME SKRIPTE"),
+                        L("SETTINGS","EINSTELLUNGEN"),
+                        L("INTERNET / WIFI","INTERNET / WIFI"),
+                        L("BATTERY INFO","AKKU INFO"),
+                        L("BUTTON TEST","TASTEN TEST"),
+                        L("LED TEST","LED TEST"),
+                        L("FILE BROWSER","DATEIBROWSER"),
+                        L("FTP","FTP"),
+                        L("SDMMC / SD","SDMMC / SD"),
+                        L("R4 CART","R4 KARTE"),
+                        L("DSTT CART","DSTT KARTE"),
+                        L("REBOOT","NEUSTART"),
+                        L("POWER OFF","AUSSCHALTEN")
+                };
+                const int n=15;
                 if(sel<scroll)scroll=sel;
                 if(sel>=scroll+vis)scroll=sel-vis+1;
                 if(scroll<0)scroll=0;
@@ -347,14 +363,17 @@ static void screen_menu(void){
                         case 1:screen_sysinfo();break;
                         case 2:screen_scripts_hub();break;
                         case 3:screen_settings();break;
-                        case 4:screen_internet();break;
+                        case 4:screen_internet_rich();break;
                         case 5:screen_battery();break;
                         case 6:screen_buttons();break;
                         case 7:screen_led();break;
                         case 8:screen_filebrowser();break;
-                        case 9:screen_ftp();break;
-                        case 10:if(confirm(L("REBOOT?","NEUSTART?"),L("Restart the console","Konsole neu starten")))reboot();break;
-                        case 11:if(confirm(L("POWER OFF?","AUSSCHALTEN?"),L("Turn console off","Konsole ausschalten")))power_off();break;
+                        case 9:screen_ftp_rich();break;
+                        case 10:screen_sdmmc();break;
+                        case 11:screen_r4();break;
+                        case 12:screen_dstt();break;
+                        case 13:if(confirm(L("REBOOT?","NEUSTART?"),L("Restart the console","Konsole neu starten")))reboot();break;
+                        case 14:if(confirm(L("POWER OFF?","AUSSCHALTEN?"),L("Turn console off","Konsole ausschalten")))power_off();break;
                         }
                 }
         }
