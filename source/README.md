@@ -4,8 +4,8 @@
 
 | What | Path | Size |
 |------|------|------|
-| **Real FIRM payload (built)** | [`firm/arm9/main.c`](../firm/arm9/main.c) | ~29 KB, full UI |
-| This folder | `source/*.c` | stubs / future modular split |
+| **Real FIRM payload (built)** | [`firm/arm9/main.c`](../firm/arm9/main.c) | ~29 KB, full UI |
+| This folder | `source/*.c` | modular development code |
 
 ## What is in the real FIRM (`firm/arm9/main.c`)
 
@@ -33,5 +33,10 @@ make firm          # uses firm/arm9/main.c (decode from scripts/firm_main_*.zlib
 
 ## This `source/` tree
 
-Planned long-term modular layout (ARM9/ARM11 split, o10 engine modules).  
-Files here (`main.c`, `o10.c`, `ui.c`, …) are **scaffolding** — they are **not** linked into Omni10.firm today.
+Planned long-term modular layout (ARM9/ARM11 split, o10 engine modules). Files
+here are **not** linked into `Omni10.firm` today. `fs.c` provides a POSIX
+host backend for the filesystem API, useful to tools and host-side development;
+it is not a bare-metal SDMMC/FAT driver. Set `OMNI_SD_ROOT` to choose the SD
+card directory (defaults to `./sdmc`). See
+[`docs/FILESYSTEM_API.md`](../docs/FILESYSTEM_API.md) for path rules and
+operation behavior.
